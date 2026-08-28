@@ -30,3 +30,7 @@ jobs:
       # move-list generation, the command deck, backstage modes, failed
       # calls, the print sheet, and the self-rebuild round trip.
       - run: npm test
+
+      # index.html is generated from ghost-light.html; fail if someone
+      # edited the source without regenerating the Pages entry point.
+      - run: npm run check:pages

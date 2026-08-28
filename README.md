@@ -70,12 +70,27 @@ The command deck is pinned to the bottom edge of the screen deliberately:
 
 ## Running it
 
-Open `ghost-light.html` in a browser. It works standalone; without the artifact runtime
-it simply reports "this device only" and keeps everything local.
+Open `index.html` in a browser, or visit the Pages site.
 
-The file is authored as a fragment (no `<!doctype>`, `<html>` or `<body>` wrapper)
-because the artifact host supplies that shell. Browsers wrap it automatically, so it
-still opens directly.
+`ghost-light.html` is the source of truth, authored as a **fragment** — no `<!doctype>`,
+`<html>` or `<body>` — because the Claude Artifact host supplies that shell itself.
+`index.html` is generated from it by `build-pages.js`, which adds the shell plus the
+`viewport` meta the fragment has no way to carry. That meta matters: without it a phone
+lays the page out at ~980px and zooms out, which defeats a command deck sized for a
+thumb.
+
+```bash
+npm run build        # regenerate index.html after editing ghost-light.html
+```
+
+CI fails if `index.html` drifts from the source, so the two cannot silently diverge.
+
+### Live sync only exists on the Artifact
+
+The Pages copy has no artifact runtime, so it reports **"This device only"** and keeps
+everything in `localStorage`. It is a usable standalone reference and a public demo, but
+calling a scene there reaches nobody else. For an actual run, the crew needs the
+published Artifact link.
 
 ### Tests
 
