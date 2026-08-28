@@ -1,0 +1,1369 @@
+<title>Ghost Light</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style id="sheet">
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+img,svg{display:block;max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4,p{margin:0}
+
+/* ---------------------------------------------------------------
+   Palette: a lighting plot seen under worklights. Flat, matte,
+   hard-edged. No gradients, no drop shadows, no floating cards.
+   --------------------------------------------------------------- */
+:root{
+  --ground:#E4E5E1; --surface:#F7F7F5; --sunk:#DCDDD8;
+  --rule:#C3C6BE; --rule2:#A8ACA2;
+  --ink:#14171B; --dim:#5D6470;
+  --work:#8A4A00;          /* worklight amber */
+  --work-ink:#FFFFFF;
+  --gel-rose:#A8235A; --gel-congo:#2438A8; --gel-green:#2F6B22;
+  --tape:#8A4A00;
+  --stage-fill:#F1E7D2; --wing-fill:#E2E5F2; --aux-fill:#F2DFE7; --void:#D3D5CF;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#06080B; --surface:#0E1116; --sunk:#04060A;
+    --rule:#1D232C; --rule2:#2C333F;
+    --ink:#EDE9E0; --dim:#7C879B;
+    --work:#FFB020; --work-ink:#140C00;
+    --gel-rose:#FF5E8A; --gel-congo:#6E8BFF; --gel-green:#86E36B;
+    --tape:#FFB020;
+    --stage-fill:#191509; --wing-fill:#0D1322; --aux-fill:#1E0F1A; --void:#04060A;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#06080B; --surface:#0E1116; --sunk:#04060A;
+  --rule:#1D232C; --rule2:#2C333F;
+  --ink:#EDE9E0; --dim:#7C879B;
+  --work:#FFB020; --work-ink:#140C00;
+  --gel-rose:#FF5E8A; --gel-congo:#6E8BFF; --gel-green:#86E36B;
+  --tape:#FFB020;
+  --stage-fill:#191509; --wing-fill:#0D1322; --aux-fill:#1E0F1A; --void:#04060A;
+}
+
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+  padding-bottom:174px;
+}
+.mono,.tag{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+.big{font-family:"Big Shoulders Display","Big Shoulders",Oswald,"Arial Narrow",Impact,sans-serif;font-weight:800;letter-spacing:.005em}
+.tag{font-size:10.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--dim)}
+:focus-visible{outline:2px solid var(--work);outline-offset:1px}
+
+/* ---------------- header: a strip of spike tape ---------------- */
+.hd{display:flex;align-items:center;gap:12px;padding:9px 16px;background:var(--surface);
+  border-bottom:1px solid var(--rule)}
+.mark{width:11px;height:11px;background:var(--tape);transform:rotate(45deg);flex:none}
+.wordmark{font-family:"Big Shoulders Display","Big Shoulders",Oswald,"Arial Narrow",Impact,sans-serif;
+  font-weight:800;font-size:19px;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.prod{font-size:13px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hd .sp{margin-left:auto}
+.stat{font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;color:var(--dim);
+  display:flex;align-items:center;gap:6px;white-space:nowrap}
+.stat::before{content:"";width:6px;height:6px;background:var(--dim);flex:none}
+.stat.ok::before{background:var(--gel-green)}
+.stat.warn::before{background:var(--gel-rose)}
+.lnk{background:none;border:0;padding:6px 4px;color:var(--dim);font-size:12px;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--rule2)}
+.lnk:hover{color:var(--ink)}
+
+/* ---------------- body: ruled, asymmetric, no cards ---------------- */
+.stagearea{display:grid;grid-template-columns:minmax(0,1fr) 336px;align-items:start;
+  border-bottom:1px solid var(--rule)}
+@media(max-width:960px){.stagearea{grid-template-columns:minmax(0,1fr)}}
+.planpane{border-right:1px solid var(--rule);min-width:0}
+@media(max-width:960px){.planpane{border-right:0;border-bottom:1px solid var(--rule)}}
+.side{min-width:0}
+.pane + .pane{border-top:1px solid var(--rule)}
+.pane-hd{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--rule);
+  background:var(--surface)}
+.pane-hd .ttl{font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--dim)}
+.pane-hd .spacer{margin-left:auto}
+.cnt{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink);border:1px solid var(--rule2);padding:1px 7px}
+.mode{font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;
+  padding:2px 7px;background:var(--sunk);color:var(--dim)}
+.mode.live{background:var(--work);color:var(--work-ink)}
+.mode.edit{background:var(--gel-green);color:var(--sunk)}
+.mode.ahead{background:var(--gel-congo);color:var(--surface)}
+.pad{padding:12px 14px}
+
+/* ---------------- ground plan ---------------- */
+.planwrap{overflow-x:auto;background:var(--void)}
+svg.plan{width:100%;height:auto;min-width:640px;display:block;touch-action:none}
+.zone-fill-stage{fill:var(--stage-fill)}
+.zone-fill-wing{fill:var(--wing-fill)}
+.zone-fill-aux{fill:var(--aux-fill)}
+.zone-edge{fill:none;stroke:var(--rule2);stroke-width:1.5}
+.zone-edge.stage{stroke:var(--work);stroke-opacity:.65}
+.zone-edge.wing{stroke:var(--gel-congo);stroke-opacity:.55}
+.zone-edge.aux{stroke:var(--gel-rose);stroke-opacity:.6}
+.zone-name{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:600;
+  font-size:15px;letter-spacing:.16em;text-transform:uppercase;fill:var(--dim)}
+.grid-line{stroke:var(--rule2);stroke-dasharray:2 6;stroke-width:1;opacity:.7}
+.grid-tag{font-family:"IBM Plex Mono",monospace;font-size:10px;fill:var(--dim);opacity:.65}
+.house{fill:none;stroke:var(--rule2);stroke-width:1;stroke-dasharray:2 7}
+.house-tag{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:600;
+  font-size:13px;letter-spacing:.24em;fill:var(--dim);opacity:.75}
+.curtain{fill:var(--gel-rose);opacity:.8}
+.curtain-rod{stroke:var(--rule2);stroke-width:1.5;opacity:.6}
+.route{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:7 5;opacity:.9}
+.route.dim{stroke:var(--dim);opacity:.25}
+.pc{cursor:pointer}
+.pc.grab{cursor:grab}
+.pc rect{stroke-width:1.5}
+.pc .cap{font-family:"IBM Plex Mono",monospace;font-size:10.5px;pointer-events:none}
+.pc .halo{fill:none;stroke:var(--work);stroke-width:2;stroke-dasharray:3 3;opacity:0}
+.pc.sel .halo{opacity:1}
+.pc .note-dot{fill:var(--ink);opacity:.75}
+
+/* ---------------- moves ---------------- */
+.moves{max-height:46vh;overflow:auto}
+.mv{display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-bottom:1px solid var(--rule);
+  cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.mv:hover{background:var(--surface)}
+.mv .sw{width:4px;align-self:stretch;min-height:26px;flex:none}
+.mv .txt{min-width:0;flex:1}
+.mv .nm{font-size:14px;font-weight:500}
+.mv .nm .verb{font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;
+  color:var(--dim);margin-right:7px}
+.mv .path{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--dim);margin-top:3px;
+  display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.mv .path .z{white-space:nowrap}
+.mv .path .via{color:var(--work)}
+.mv .path .ar{opacity:.5}
+.mv .hint{font-size:12px;color:var(--dim);margin-top:3px}
+.empty{color:var(--dim);font-size:13px;padding:14px}
+
+/* ---------------- forms ---------------- */
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row + .row{margin-top:9px}
+input[type=text],textarea{background:var(--sunk);border:1px solid var(--rule2);border-radius:0;
+  padding:7px 9px;font-size:13px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:56px;font-family:inherit}
+label.f{display:flex;flex-direction:column;gap:4px;flex:1 1 130px}
+label.f > span{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:var(--dim)}
+.btn{background:var(--sunk);border:1px solid var(--rule2);border-radius:0;padding:8px 12px;font-size:13px;
+  cursor:pointer;min-height:38px}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.hot{border-color:var(--gel-rose);color:var(--gel-rose)}
+.btn.go-small{background:var(--work);border-color:var(--work);color:var(--work-ink);font-weight:600}
+.plist{max-height:32vh;overflow:auto;border:1px solid var(--rule)}
+.pitem{display:flex;gap:9px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--rule)}
+.pitem:last-child{border-bottom:0}
+.pitem .sw{width:12px;height:12px;flex:none}
+.pitem .nm{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .zn{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--rule2)}
+.seg button{border:0;background:none;padding:7px 11px;font-size:12px;cursor:pointer;min-height:36px}
+.seg button.on{background:var(--work);color:var(--work-ink);font-weight:600}
+.rule{height:1px;background:var(--rule);margin:13px 0}
+.help{font-size:12px;color:var(--dim);line-height:1.45}
+
+/* ---------------------------------------------------------------
+   Command deck — fixed to the bottom edge of the screen.
+   Fitts's law: the primary target sits ON the edge, so it is
+   effectively infinitely tall and cannot be overshot. It is the
+   largest thing on screen and it NEVER moves or changes slot,
+   so the thumb learns one location and stops aiming.
+   --------------------------------------------------------------- */
+.cmd{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--rule2)}
+.jump{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--rule);
+  background:var(--sunk)}
+.jump .t{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--dim);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--rule);scrollbar-width:thin}
+.sc{flex:none;border:0;border-right:1px solid var(--rule);background:none;cursor:pointer;
+  padding:7px 13px;text-align:left;min-width:98px;min-height:46px}
+.sc:hover{background:var(--sunk)}
+.sc .n{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);letter-spacing:.08em}
+.sc .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:148px}
+.sc.cur{background:var(--sunk);box-shadow:inset 0 -3px 0 var(--gel-congo)}
+.sc.livesc .n{color:var(--work)}
+.sc.livesc{box-shadow:inset 0 -3px 0 var(--work)}
+.sc.cur.livesc{box-shadow:inset 0 -3px 0 var(--work)}
+
+.deck{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 12px 12px;align-items:stretch}
+.slotL{display:flex;gap:8px}
+/* secondary targets: deliberately smaller and set apart from the
+   primary, so a mis-aimed thumb lands on nothing rather than on GO */
+.sec{background:var(--sunk);border:1px solid var(--rule2);cursor:pointer;
+  min-width:56px;min-height:72px;padding:6px 10px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;font-size:12px;line-height:1.15}
+.sec:hover:not(:disabled){border-color:var(--ink)}
+.sec:disabled{opacity:.3;cursor:not-allowed}
+.sec .ic{font-family:"IBM Plex Mono",monospace;font-size:15px}
+.sec .cap{font-family:"IBM Plex Mono",monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
+
+.go{background:var(--work);border:1px solid var(--work);color:var(--work-ink);cursor:pointer;
+  min-height:72px;padding:8px 16px;display:flex;flex-direction:column;justify-content:center;gap:1px;
+  text-align:left;width:100%}
+.go:hover:not(:disabled){filter:brightness(1.07)}
+.go:active:not(:disabled){filter:brightness(.93)}
+.go:disabled{opacity:.32;cursor:not-allowed}
+.go .k{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:.16em;opacity:.8}
+.go .v{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:800;
+  font-size:29px;line-height:1;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.go .v .num{opacity:.62;margin-right:9px}
+
+/* crew read-out occupies the same slot as GO: same size, same place,
+   but flat and unclickable so nobody taps the show forward by accident */
+.readout{background:var(--sunk);border:1px solid var(--rule2);min-height:72px;padding:8px 16px;
+  display:flex;flex-direction:column;justify-content:center;gap:1px}
+.readout .k{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--work)}
+.readout .v{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:800;
+  font-size:29px;line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.readout .v .num{color:var(--dim);margin-right:9px}
+.readout.away{border-color:var(--gel-congo)}
+.readout.away .k{color:var(--gel-congo)}
+
+/* ---------------- modal / toast ---------------- */
+.scrim{position:fixed;inset:0;background:rgba(4,6,10,.72);display:flex;align-items:center;justify-content:center;
+  padding:18px;z-index:70}
+.modal{background:var(--surface);border:1px solid var(--rule2);max-width:440px;width:100%;padding:20px}
+.modal h3{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:800;
+  font-size:24px;letter-spacing:.02em;text-transform:uppercase;line-height:1;margin-bottom:8px}
+.pick{display:flex;flex-direction:column;gap:1px;margin-top:16px;border:1px solid var(--rule2)}
+.pick button{text-align:left;padding:14px;background:var(--sunk);border:0;border-bottom:1px solid var(--rule);
+  cursor:pointer;display:flex;flex-direction:column;gap:3px;min-height:56px}
+.pick button:last-child{border-bottom:0}
+.pick button:hover{background:var(--ground)}
+.pick button b{font-size:15px}
+.pick button span{font-size:12px;color:var(--dim)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:190px;background:var(--ink);color:var(--ground);
+  padding:10px 15px;font-size:13px;z-index:80;max-width:88vw;text-align:center}
+.hide{display:none !important}
+
+/* ---------------------------------------------------------------
+   Backstage dimmer. A phone at full brightness in the wings spills
+   light into the house and kills night vision. Blackout also warms
+   the screen toward red, which the dark-adapted eye tolerates.
+   --------------------------------------------------------------- */
+#dim{position:fixed;inset:0;pointer-events:none;z-index:100;background:#000;opacity:0;transition:opacity .35s}
+#dim.tint{background:#2E0A00}
+
+/* A failed call is the worst thing that can happen in a run: the SM
+   thinks the show moved on and nobody else's phone did. Say it loudly
+   and keep saying it until it is fixed. */
+.alert{display:flex;gap:10px;align-items:center;padding:11px 14px;background:var(--gel-rose);
+  color:#12040A;font-size:13px;font-weight:500;border-bottom:1px solid var(--rule2)}
+.alert .msg{flex:1;min-width:0}
+.alert button{background:#12040A;color:#fff;border:0;padding:8px 13px;font-size:13px;cursor:pointer;min-height:40px}
+
+/* Paper backup. Wifi in a school theatre is not a plan. */
+.sheet{display:none}
+@media print{
+  :root{--ground:#fff;--surface:#fff;--sunk:#fff;--ink:#000;--dim:#444;--rule:#bbb;--rule2:#777;--work:#000}
+  body{padding:0;background:#fff;color:#000}
+  .hd,.stagearea,.cmd,#dim,.alert,.toast,.scrim{display:none !important}
+  .sheet{display:block !important;padding:0 6mm}
+  .sheet h1{font-size:24px;margin-bottom:2mm}
+  .sheet .meta{font-size:11px;color:#444;margin-bottom:5mm}
+  .sheet .blk{break-inside:avoid;page-break-inside:avoid;border-top:1px solid #bbb;padding:3mm 0}
+  .sheet .hd2{display:flex;gap:8px;align-items:baseline}
+  .sheet .no{font-size:19px;min-width:9mm}
+  .sheet .nmx{font-size:16px;font-weight:600}
+  .sheet .cur{font-size:11px;border:1px solid #777;padding:0 5px;margin-left:auto}
+  .sheet .nt{font-size:11.5px;color:#333;margin:1mm 0 2mm}
+  .sheet ol{margin:0;padding-left:6mm;font-size:12px}
+  .sheet li{margin-bottom:1mm}
+  .sheet .none{font-size:11.5px;color:#555;font-style:italic}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+</style>
+
+<div id="root">
+  <header class="hd">
+    <span class="mark"></span>
+    <span class="wordmark">Ghost Light</span>
+    <span class="prod" id="showname">—</span>
+    <span class="sp"></span>
+    <button class="lnk" id="btn-dim">Bright</button>
+    <button class="lnk" id="btn-wake">Screen</button>
+    <span class="stat" id="syncchip">Connecting</span>
+    <button class="lnk" id="btn-role">Role</button>
+  </header>
+
+  <div class="alert hide" id="alert"></div>
+
+  <main class="stagearea">
+    <section class="planpane">
+      <div class="pane-hd">
+        <span class="ttl">Ground plan</span>
+        <span class="mode" id="plan-mode">—</span>
+        <span class="spacer"></span>
+        <button class="lnk" id="btn-routes">Routes on</button>
+        <button class="lnk" id="btn-replay">Replay</button>
+      </div>
+      <div class="planwrap" id="planwrap"></div>
+      <div class="pad" id="inspector"></div>
+    </section>
+
+    <aside class="side">
+      <section class="pane">
+        <div class="pane-hd"><span class="ttl">Change into this scene</span><span class="spacer"></span>
+          <span class="seg" id="mvfilter"></span>
+          <span class="cnt" id="mvcount">0</span></div>
+        <div class="moves" id="moves"></div>
+      </section>
+      <section class="pane">
+        <div class="pane-hd"><span class="ttl">Scene notes</span></div>
+        <div class="pad" id="notes"></div>
+      </section>
+      <section class="pane" id="editcard">
+        <div class="pane-hd"><span class="ttl">Build the show</span><span class="spacer"></span>
+          <button class="lnk" id="btn-editopen">Open</button></div>
+        <div class="pad hide" id="editbody"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div class="cmd">
+    <div class="jump hide" id="jump"></div>
+    <div class="rail" id="strip"></div>
+    <div class="deck"><div class="slotL" id="slotL"></div><div id="slotR"></div></div>
+  </div>
+
+  <div class="sheet" id="runsheet"></div>
+  <div id="dim"></div>
+</div>
+
+<script id="state" type="application/json">{"rev":6,"show":"Spring Production","liveIndex":3,"liveStamp":1787933485486,"pieces":[{"id":"p1","name":"Sofa","w":118,"h":50,"color":"#C1683B"},{"id":"p2","name":"Kitchen table","w":86,"h":62,"color":"#4E8C6A"},{"id":"p3","name":"Chair A","w":34,"h":34,"color":"#6D7BC4"},{"id":"p4","name":"Chair B","w":34,"h":34,"color":"#6D7BC4"},{"id":"p5","name":"Door unit","w":74,"h":26,"color":"#9C5AA8"},{"id":"p6","name":"Platform wagon","w":150,"h":92,"color":"#B0913F"},{"id":"p7","name":"Bench","w":98,"h":32,"color":"#3F8AA0"},{"id":"p8","name":"Lamppost","w":26,"h":26,"color":"#B8474C"}],"scenes":[{"id":"s1","name":"Preshow","note":"House open. Nothing onstage but the wagon, parked upstage centre. Everything else preset in the wings.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.34,"r":0,"note":"Against back wall, upstage of leg 2"},"p2":{"zone":"wingSR","x":0.5,"y":0.62,"r":0,"note":"Downstage of leg 3, chairs stacked on top"},"p3":{"zone":"wingSR","x":0.28,"y":0.78,"r":0,"note":""},"p4":{"zone":"wingSR","x":0.66,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s2","name":"1-1 Kitchen","note":"Curtain out. Table and both chairs live centre; sofa comes on stage right.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"stage","x":0.48,"y":0.55,"r":0,"note":""},"p3":{"zone":"stage","x":0.34,"y":0.55,"r":0,"note":""},"p4":{"zone":"stage","x":0.62,"y":0.55,"r":0,"note":""},"p1":{"zone":"stage","x":0.2,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s3","name":"1-2 Street","note":"Blackout change, 40 seconds. Kitchen strikes to wing SR, bench and lamppost come on. Door unit travels aux to wing SR first — do that during 1-1.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p7":{"zone":"stage","x":0.58,"y":0.7,"r":0,"note":""},"p8":{"zone":"stage","x":0.24,"y":0.62,"r":0,"note":""},"p5":{"zone":"wingSR","x":0.5,"y":0.5,"r":0,"note":"Staged for act 2, downstage of leg 2"},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s4","name":"Intermission","note":"Curtain in. Full reset for act 2 — 12 minutes. Door unit onto the wagon.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s5","name":"2-1 Parlor","note":"Curtain out on the top of act 2. Sofa and both chairs, door unit stays on the wagon.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p1":{"zone":"stage","x":0.44,"y":0.66,"r":0,"note":""},"p3":{"zone":"stage","x":0.2,"y":0.6,"r":0,"note":""},"p4":{"zone":"stage","x":0.72,"y":0.62,"r":0,"note":""},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""}}}]}</script>
+
+<script id="app">
+(function(){
+"use strict";
+/* ---------- self-rebuild capture (must run before anything mutates) ---------- */
+var ROOT_HTML = document.getElementById("root").innerHTML;
+var CSS_SRC   = document.getElementById("sheet").textContent;
+var APP_SRC   = document.getElementById("app").textContent;
+var FONTLINK  = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;600;800&display=swap">'
+              + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">';
+
+function pageSource(state){
+  var json = JSON.stringify(state).replace(/</g, "\\u003c");
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    + '<title>Ghost Light</title>' + FONTLINK
+    + '<style id="sheet">' + CSS_SRC + '<\/style></head><body><div id="root">'
+    + ROOT_HTML + '</div><script id="state" type="application/json">' + json + '<\/script>'
+    + '<script id="app">' + APP_SRC + '<\/script></body></html>';
+}
+
+/* ---------- state ---------- */
+var S = JSON.parse(document.getElementById("state").textContent);
+var LS = {
+  get:function(k,d){ try{ var v=localStorage.getItem("gl:"+k); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
+  set:function(k,v){ try{ localStorage.setItem("gl:"+k, JSON.stringify(v)); }catch(e){} }
+};
+var draft = LS.get("draft", null);
+if (draft && draft.baseRev === S.rev) { S = draft.state; }
+
+var role     = LS.get("role", null);
+var viewIdx  = S.liveIndex;
+var browsing = false;
+var editing  = false;
+var showRoutes = LS.get("routes", true);
+var selected = null;
+var dirty    = !!draft;
+var api      = null;
+var apiState = "checking";
+var lastSeen = LS.get("lastSeen", -1);
+var mvFilter = LS.get("mvfilter", "all");   // all | sr | sl
+var calling  = false;                       // a call is in flight
+var callFail = null;                        // scene index whose call did not sync
+
+/* ---------- geometry ---------- */
+var VB = { w:1170, h:658 };
+var ZONES = {
+  aux:    { x:20,  y:132, w:150, h:268, kind:"aux",   name:"Aux stage", sub:"stage right" },
+  wingSR: { x:190, y:80,  w:160, h:462, kind:"wing",  name:"Wing SR" },
+  stage:  { x:370, y:80,  w:600, h:462, kind:"stage", name:"Stage" },
+  wingSL: { x:990, y:80,  w:160, h:462, kind:"wing",  name:"Wing SL" }
+};
+var ORDER = { aux:0, wingSR:1, stage:2, wingSL:3 };
+var CROSS_Y = 50, CURTAIN_Y = 542;
+var COLS = ["R","C","L"], ROWS = ["US","MS","DS"];
+
+function zoneOf(id){ return ZONES[id]; }
+function abs(pl){ var z=zoneOf(pl.zone); if(!z) return null; return { x:z.x+pl.x*z.w, y:z.y+pl.y*z.h }; }
+function cellName(pl){
+  var c = pl.x<0.34?0:(pl.x<0.67?1:2), r = pl.y<0.34?0:(pl.y<0.67?1:2);
+  return ROWS[r]+COLS[c];
+}
+function zoneLabel(pl){
+  if(!pl) return "Not in play";
+  if(pl.zone==="stage") return "Stage " + cellName(pl);
+  return zoneOf(pl.zone) ? zoneOf(pl.zone).name : pl.zone;
+}
+function pieceById(id){ for(var i=0;i<S.pieces.length;i++) if(S.pieces[i].id===id) return S.pieces[i]; return null; }
+function sceneAt(i){ return S.scenes[i] || null; }
+
+var SIDE = { aux:"R", wingSR:"R", stage:"C", wingSL:"L" };
+function ctr(zid, fy){ var z = ZONES[zid]; return { x:z.x+z.w/2, y:z.y+z.h*(fy===undefined?0.5:fy) }; }
+function route(from, to){
+  var a = abs(from), b = abs(to);
+  if(!a || !b) return { pts:[], via:[] };
+  var f = from.zone, t = to.zone;
+  if(f === t) return { pts:[a,b], via:[] };
+  var pts = [a], via = [];
+  if(SIDE[f] !== "C" && SIDE[t] !== "C" && SIDE[f] !== SIDE[t]){
+    if(f === "aux"){ pts.push(ctr("wingSR", 0.35)); via.push("Wing SR"); }
+    pts.push({ x: ctr(f === "aux" ? "wingSR" : f).x, y: CROSS_Y });
+    pts.push({ x: ctr(t === "aux" ? "wingSR" : t).x, y: CROSS_Y });
+    via.push("Crossover");
+    if(t === "aux"){ pts.push(ctr("wingSR", 0.35)); via.push("Wing SR"); }
+  } else {
+    var fi = ORDER[f], ti = ORDER[t], stepDir = ti > fi ? 1 : -1;
+    for(var i = fi + stepDir; i !== ti; i += stepDir){
+      var zid = Object.keys(ORDER).filter(function(k){ return ORDER[k] === i; })[0];
+      if(zid){ pts.push(ctr(zid, 0.5)); via.push(ZONES[zid].name); }
+    }
+  }
+  pts.push(b);
+  return { pts:pts, via:via };
+}
+
+/* ---------- move list ---------- */
+var MOVE_EPS = 0.05;
+function movesBetween(prev, next){
+  if(!next || !prev) return [];
+  var out = [];
+  if(prev.curtain !== next.curtain){
+    out.push({ kind:"curtain", text: next.curtain==="open" ? "Curtain out" : "Curtain in",
+               sub: next.curtain==="open" ? "open before the scene" : "close on the scene" });
+  }
+  var seen = {};
+  var ids = Object.keys(next.place).concat(Object.keys(prev.place));
+  ids.forEach(function(id){
+    if(seen[id]) return; seen[id]=1;
+    var p = pieceById(id); if(!p) return;
+    var a = prev.place[id] || null, b = next.place[id] || null;
+    if(!a && !b) return;
+    if(!b){ out.push({ kind:"off", piece:p, from:a, to:null }); return; }
+    if(!a){ out.push({ kind:"on", piece:p, from:null, to:b }); return; }
+    if(a.zone !== b.zone){ out.push({ kind:"trav", piece:p, from:a, to:b, r:route(a,b) }); return; }
+    if(Math.abs(a.x-b.x)>MOVE_EPS || Math.abs(a.y-b.y)>MOVE_EPS || (a.r||0)!==(b.r||0)){
+      out.push({ kind:"shift", piece:p, from:a, to:b, r:route(a,b) });
+    }
+  });
+  var rank = { curtain:0, trav:1, on:2, shift:3, off:4 };
+  out.sort(function(m,n){ return rank[m.kind]-rank[n.kind]; });
+  return out;
+}
+
+/* ---------- svg ---------- */
+var $ = function(id){ return document.getElementById(id); };
+var planwrap = $("planwrap");
+var svgNS = "http://www.w3.org/2000/svg";
+var svg=null, pieceLayer=null, routeLayer=null, curtainL=null, curtainR=null;
+
+function el(tag, attrs, parent){
+  var n = document.createElementNS(svgNS, tag);
+  for(var k in attrs) n.setAttribute(k, attrs[k]);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+function buildPlan(){
+  planwrap.innerHTML = "";
+  svg = el("svg", { viewBox:"0 0 "+VB.w+" "+VB.h, class:"plan", "aria-label":"Stage ground plan" });
+  planwrap.appendChild(svg);
+
+  el("rect", { x:190, y:26, width:960, height:48, fill:"none", stroke:"var(--rule2)", "stroke-dasharray":"3 7" }, svg);
+  var cx = el("text", { x:670, y:56, "text-anchor":"middle", class:"zone-name" }, svg);
+  cx.textContent = "Upstage crossover";
+
+  Object.keys(ZONES).forEach(function(zid){
+    var z = ZONES[zid];
+    el("rect", { x:z.x, y:z.y, width:z.w, height:z.h, class:"zone-fill-"+z.kind }, svg);
+    el("rect", { x:z.x, y:z.y, width:z.w, height:z.h, class:"zone-edge "+z.kind }, svg);
+    var t = el("text", { x:z.x+z.w/2, y:z.y-10, "text-anchor":"middle", class:"zone-name" }, svg);
+    t.textContent = z.name.toUpperCase();
+    if(z.sub){
+      var t2 = el("text", { x:z.x+z.w/2, y:z.y+z.h+17, "text-anchor":"middle", class:"grid-tag" }, svg);
+      t2.textContent = z.sub;
+    }
+  });
+
+  var st = ZONES.stage;
+  [1,2].forEach(function(i){
+    el("line", { x1:st.x+st.w*i/3, y1:st.y, x2:st.x+st.w*i/3, y2:st.y+st.h, class:"grid-line" }, svg);
+    el("line", { x1:st.x, y1:st.y+st.h*i/3, x2:st.x+st.w, y2:st.y+st.h*i/3, class:"grid-line" }, svg);
+  });
+  for(var r=0;r<3;r++) for(var c=0;c<3;c++){
+    var g = el("text", { x:st.x+st.w*(c/3)+8, y:st.y+st.h*(r/3)+15, class:"grid-tag" }, svg);
+    g.textContent = ROWS[r]+COLS[c];
+  }
+  ["wingSR","wingSL"].forEach(function(zid){
+    var z = ZONES[zid];
+    [1,2,3].forEach(function(i){
+      el("line", { x1:z.x+6, y1:z.y+z.h*i/4, x2:z.x+z.w-6, y2:z.y+z.h*i/4, class:"grid-line" }, svg);
+      var lg = el("text", { x:z.x+6, y:z.y+z.h*i/4-4, class:"grid-tag" }, svg);
+      lg.textContent = "leg "+i;
+    });
+  });
+
+  routeLayer = el("g", {}, svg);
+  pieceLayer = el("g", {}, svg);
+
+  el("line", { x1:st.x-8, y1:CURTAIN_Y, x2:st.x+st.w+8, y2:CURTAIN_Y, class:"curtain-rod" }, svg);
+  curtainL = el("rect", { x:st.x, y:CURTAIN_Y-5, width:st.w/2, height:10, class:"curtain" }, svg);
+  curtainR = el("rect", { x:st.x+st.w/2, y:CURTAIN_Y-5, width:st.w/2, height:10, class:"curtain" }, svg);
+
+  el("rect", { x:st.x, y:CURTAIN_Y+26, width:st.w, height:62, class:"house" }, svg);
+  var h = el("text", { x:st.x+st.w/2, y:CURTAIN_Y+61, "text-anchor":"middle", class:"house-tag" }, svg);
+  h.textContent = "AUDIENCE";
+  var o = el("text", { x:st.x+st.w/2, y:CURTAIN_Y+79, "text-anchor":"middle", class:"grid-tag" }, svg);
+  o.textContent = "drawn from the house — stage right is on your left";
+
+  svg.addEventListener("pointerdown", onPointerDown);
+}
+function setCurtain(open, animate){
+  var st = ZONES.stage, half = st.w/2;
+  var w = open ? half*0.12 : half;
+  curtainL.style.transition = animate ? "width .55s ease" : "none";
+  curtainR.style.transition = animate ? "width .55s ease, x .55s ease" : "none";
+  curtainL.setAttribute("width", w);
+  curtainR.setAttribute("width", w);
+  curtainR.setAttribute("x", st.x+st.w-w);
+}
+
+var nodes = {};
+function drawPieces(scene){
+  pieceLayer.innerHTML = ""; nodes = {};
+  if(!scene) return;
+  S.pieces.forEach(function(p){
+    var pl = scene.place[p.id];
+    if(!pl) return;
+    var a = abs(pl); if(!a) return;
+    var rot = pl.r||0;
+    var w = rot ? p.h : p.w, hh = rot ? p.w : p.h;
+    var g = el("g", { class:"pc"+(selected===p.id?" sel":"")+(editing?" grab":""), "data-id":p.id,
+                      transform:"translate("+a.x+","+a.y+")" }, pieceLayer);
+    el("rect", { x:-w/2-5, y:-hh/2-5, width:w+10, height:hh+10, class:"halo" }, g);
+    el("rect", { x:-w/2, y:-hh/2, width:w, height:hh, fill:p.color, stroke:"rgba(0,0,0,.4)" }, g);
+    var t = el("text", { x:0, y:hh/2+13, "text-anchor":"middle", class:"cap", fill:"var(--ink)" }, g);
+    t.textContent = p.name;
+    if(pl.note) el("circle", { cx:w/2-6, cy:-hh/2+6, r:3, class:"note-dot" }, g);
+    nodes[p.id] = g;
+  });
+}
+function drawRoutes(moves){
+  routeLayer.innerHTML = "";
+  if(!showRoutes) return;
+  moves.forEach(function(m){
+    if(!m.r || m.r.pts.length<2) return;
+    var d = m.r.pts.map(function(p,i){ return (i?"L":"M")+p.x+" "+p.y; }).join(" ");
+    el("path", { d:d, class:"route"+(selected&&selected!==m.piece.id?" dim":"") }, routeLayer);
+  });
+}
+
+/* ---------- animation ---------- */
+var animRAF = null;
+function animateTransition(fromScene, toScene){
+  if(!toScene) return;
+  drawPieces(toScene);
+  var moves = movesBetween(fromScene, toScene);
+  drawRoutes(moves);
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!fromScene || reduce){ setCurtain(toScene.curtain==="open", false); return; }
+
+  var tracks = [];
+  moves.forEach(function(m){
+    if(!m.piece || !m.r || m.r.pts.length<2) return;
+    var g = nodes[m.piece.id]; if(!g) return;
+    var pts = m.r.pts, segs = [], total = 0;
+    for(var i=1;i<pts.length;i++){
+      var dx=pts[i].x-pts[i-1].x, dy=pts[i].y-pts[i-1].y, len=Math.sqrt(dx*dx+dy*dy);
+      segs.push({a:pts[i-1],b:pts[i],len:len}); total+=len;
+    }
+    if(total<1) return;
+    tracks.push({ g:g, segs:segs, total:total });
+  });
+  if(!tracks.length){
+    setCurtain(fromScene.curtain==="open", false);
+    requestAnimationFrame(function(){ setCurtain(toScene.curtain==="open", fromScene.curtain!==toScene.curtain); });
+    return;
+  }
+  var DUR = 1500, t0 = null;
+  if(animRAF) cancelAnimationFrame(animRAF);
+  function step(ts){
+    if(t0===null) t0 = ts;
+    var k = Math.min(1, (ts-t0)/DUR);
+    var e = k<0.5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+    tracks.forEach(function(tr){
+      var want = e*tr.total, acc = 0, pos = tr.segs[tr.segs.length-1].b;
+      for(var i=0;i<tr.segs.length;i++){
+        var s = tr.segs[i];
+        if(want <= acc+s.len || i===tr.segs.length-1){
+          var f = s.len ? (want-acc)/s.len : 1; f = Math.max(0,Math.min(1,f));
+          pos = { x:s.a.x+(s.b.x-s.a.x)*f, y:s.a.y+(s.b.y-s.a.y)*f };
+          break;
+        }
+        acc += s.len;
+      }
+      tr.g.setAttribute("transform","translate("+pos.x+","+pos.y+")");
+    });
+    if(k<1) animRAF = requestAnimationFrame(step);
+    else { animRAF=null; drawPieces(toScene); drawRoutes(moves); }
+  }
+  tracks.forEach(function(tr){ tr.g.setAttribute("transform","translate("+tr.segs[0].a.x+","+tr.segs[0].a.y+")"); });
+  setCurtain(fromScene.curtain==="open", false);
+  requestAnimationFrame(function(){
+    if(fromScene.curtain!==toScene.curtain) setCurtain(toScene.curtain==="open", true);
+    animRAF = requestAnimationFrame(step);
+  });
+}
+
+/* ---------- dragging ---------- */
+var drag = null;
+function svgPoint(evt){
+  var pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+  var m = svg.getScreenCTM(); if(!m) return null;
+  return pt.matrixTransform(m.inverse());
+}
+function hitZone(p){
+  var best = null;
+  Object.keys(ZONES).forEach(function(zid){
+    var z = ZONES[zid];
+    if(p.x>=z.x && p.x<=z.x+z.w && p.y>=z.y && p.y<=z.y+z.h) best = zid;
+  });
+  return best;
+}
+function onPointerDown(evt){
+  var g = evt.target.closest ? evt.target.closest(".pc") : null;
+  if(!g) return;
+  selected = g.getAttribute("data-id");
+  if(!editing){ render(); return; }
+  var p = svgPoint(evt); if(!p) return;
+  drag = { id:selected, g:g };
+  svg.setPointerCapture(evt.pointerId);
+  svg.addEventListener("pointermove", onPointerMove);
+  svg.addEventListener("pointerup", onPointerUp);
+  render();
+  evt.preventDefault();
+}
+function onPointerMove(evt){
+  if(!drag) return;
+  var p = svgPoint(evt); if(!p) return;
+  drag.g.setAttribute("transform","translate("+p.x+","+p.y+")");
+}
+function onPointerUp(evt){
+  if(!drag) return;
+  var p = svgPoint(evt);
+  svg.removeEventListener("pointermove", onPointerMove);
+  svg.removeEventListener("pointerup", onPointerUp);
+  var sc = sceneAt(viewIdx);
+  if(p && sc){
+    var zid = hitZone(p);
+    if(zid){
+      var z = ZONES[zid];
+      var cur = sc.place[drag.id] || { r:0, note:"" };
+      sc.place[drag.id] = {
+        zone: zid,
+        x: Math.max(0.03, Math.min(0.97, (p.x-z.x)/z.w)),
+        y: Math.max(0.03, Math.min(0.97, (p.y-z.y)/z.h)),
+        r: cur.r||0, note: cur.note||""
+      };
+      markDirty();
+    } else {
+      toast("Dropped outside the theatre — put it on the stage, in a wing, or on the aux stage.");
+    }
+  }
+  drag = null;
+  render();
+}
+
+/* ---------- sync ---------- */
+function markDirty(){ dirty = true; LS.set("draft", { baseRev:S.rev, state:S }); paintDeck(); }
+function clearDraft(){ dirty = false; LS.set("draft", null); }
+function toast(msg, ms){
+  var old = document.querySelector(".toast"); if(old) old.remove();
+  var d = document.createElement("div"); d.className = "toast"; d.textContent = msg;
+  document.body.appendChild(d);
+  setTimeout(function(){ if(d.parentNode) d.remove(); }, ms||3600);
+}
+function syncStatus(txt, cls){
+  var c = $("syncchip"); c.textContent = txt; c.className = "stat" + (cls?(" "+cls):"");
+}
+function syncChip(){
+  if(apiState === "checking") syncStatus("Connecting");
+  else if(apiState === "readonly") syncStatus("View only", "warn");
+  else if(apiState === "local") syncStatus("This device only", "warn");
+  else if(dirty) syncStatus("Unsaved", "warn");
+  else syncStatus("Synced", "ok");
+}
+async function publish(){
+  if(!api){ toast("No live sync in this view — the change is saved on this device only."); return false; }
+  syncStatus("Sending");
+  S.rev = (S.rev||1) + 1;
+  try{
+    await api.publish(pageSource(S));
+    clearDraft();
+    return true;
+  }catch(err){
+    S.rev = S.rev - 1;
+    var code = (err && err.code) || "upstream_error";
+    if(code === "conflict"){
+      syncStatus("Reloading", "warn");
+      toast("Someone else saved first — this device is reloading to their version.");
+    } else if(code === "not_writer" || code === "not_granted" || code === "consent_required" || code === "not_declared"){
+      apiState = "readonly"; api = null;
+      toast("This device can view but not save. Ask whoever owns the link to send you an edit link.");
+      render();
+    } else if(code === "rate_limited"){
+      syncStatus("Too fast", "warn");
+      toast("Saving too quickly. Wait a few seconds, then try again.");
+    } else if(code === "too_large"){
+      syncStatus("Too big", "warn");
+      toast("The show file is too large to save. Remove a few scenes or pieces.");
+    } else {
+      syncStatus("Save failed", "warn");
+      toast("Save failed. Your work is kept on this device — try again in a moment.");
+    }
+    return false;
+  }
+}
+async function callScene(i){
+  if(calling) return;                       // one tap, one call
+  if(i<0 || i>=S.scenes.length) return;
+  S.liveIndex = i; S.liveStamp = Date.now();
+  viewIdx = i; browsing = false;
+  calling = true; callFail = null;
+  render();
+  syncStatus("Calling");
+  var ok = await publish();
+  calling = false;
+  if(!ok) callFail = i;                     // this device moved; the others did not
+  render();
+}
+
+/* ---------- backstage: keep the screen awake ---------- */
+var wakeLock = null, wakeWanted = LS.get("wake", false), wakeOk = ("wakeLock" in navigator);
+async function applyWake(){
+  try{
+    if(wakeWanted && wakeOk){
+      if(!wakeLock){
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", function(){ wakeLock = null; });
+      }
+    } else if(wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){
+    wakeWanted = false; LS.set("wake", false);
+    toast("This browser will not keep the screen awake. Set your phone's auto-lock to Never for the run.");
+  }
+  paintHeader();
+}
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "visible" && wakeWanted && !wakeLock) applyWake();
+});
+
+/* ---------- backstage: dim the screen ---------- */
+var DIMS = [
+  { label:"Bright",   a:0,    tint:false },
+  { label:"Dim",      a:0.5,  tint:false },
+  { label:"Blackout", a:0.78, tint:true  }
+];
+var dimIdx = LS.get("dim", 0), forcedDark = false;
+function applyDim(){
+  var d = $("dim"), s = DIMS[dimIdx];
+  d.style.opacity = s.a;
+  d.className = s.tint ? "tint" : "";
+  if(dimIdx > 0 && !forcedDark){
+    document.documentElement.setAttribute("data-theme","dark"); forcedDark = true;
+  } else if(dimIdx === 0 && forcedDark){
+    document.documentElement.removeAttribute("data-theme"); forcedDark = false;
+  }
+  paintHeader();
+}
+
+/* ---------- command deck ----------
+   Hick's law: during a run only three things are reachable —
+   go back, go forward, look ahead. Everything else is behind a
+   mode, so there is no list to read under pressure.            */
+function paintDeck(){
+  var isSM = role === "sm";
+  var live = sceneAt(S.liveIndex), next = sceneAt(S.liveIndex+1);
+  var L = $("slotL"), R = $("slotR"), J = $("jump");
+  L.innerHTML = ""; R.innerHTML = "";
+
+  function sec(icon, cap, fn, dis){
+    var b = document.createElement("button");
+    b.className = "sec"; b.disabled = !!dis;
+    b.innerHTML = '<span class="ic">'+icon+'</span><span class="cap">'+cap+'</span>';
+    b.addEventListener("click", fn); L.appendChild(b); return b;
+  }
+
+  if(isSM){
+    if(browsing) sec("&#9679;", "Live", function(){ browsing=false; viewIdx=S.liveIndex; render(); });
+    else sec("&#9664;", "Back", function(){ callScene(S.liveIndex-1); }, S.liveIndex<=0);
+
+    var go = document.createElement("button");
+    go.className = "go"; go.disabled = !next || calling;
+    if(calling){
+      go.innerHTML = '<span class="k">Sending to every device</span><span class="v">Calling…</span>';
+      R.appendChild(go); J.classList.add("hide"); syncChip(); return;
+    }
+    go.innerHTML = '<span class="k">' + (next ? "Call next scene" : "End of show") + '</span>'
+      + '<span class="v">' + (next ? '<span class="num">'+(S.liveIndex+2)+'</span>'+esc(next.name)
+                                   : '<span class="num">'+(S.liveIndex+1)+'</span>'+esc(live?live.name:"—")) + '</span>';
+    go.addEventListener("click", function(){ callScene(S.liveIndex+1); });
+    R.appendChild(go);
+
+    if(browsing && viewIdx !== S.liveIndex){
+      J.classList.remove("hide");
+      J.innerHTML = "";
+      var t = document.createElement("span"); t.className = "t";
+      t.textContent = "Looking at " + (viewIdx+1) + ". " + (sceneAt(viewIdx)||{}).name;
+      var jb = document.createElement("button"); jb.className = "btn go-small";
+      jb.textContent = "Jump the show here";
+      jb.addEventListener("click", function(){ callScene(viewIdx); });
+      J.appendChild(t); J.appendChild(jb);
+    } else J.classList.add("hide");
+  } else {
+    sec("&#9664;", "Back", function(){
+      viewIdx = Math.max(0, viewIdx-1); browsing = viewIdx !== S.liveIndex; render();
+    }, viewIdx<=0);
+    sec("&#9654;", "Ahead", function(){
+      viewIdx = Math.min(S.scenes.length-1, viewIdx+1); browsing = viewIdx !== S.liveIndex; render();
+    }, viewIdx>=S.scenes.length-1);
+
+    var ro = document.createElement("div");
+    ro.className = "readout" + (browsing ? " away" : "");
+    var sc = sceneAt(viewIdx);
+    ro.innerHTML = '<span class="k">' + (browsing ? "Looking ahead — not live" : "Live now") + '</span>'
+      + '<span class="v"><span class="num">'+(viewIdx+1)+'</span>'+esc(sc?sc.name:"No scenes")+'</span>';
+    R.appendChild(ro);
+
+    if(browsing){
+      J.classList.remove("hide"); J.innerHTML = "";
+      var t2 = document.createElement("span"); t2.className = "t";
+      t2.textContent = "The show is on " + (S.liveIndex+1) + ". " + (live?live.name:"—");
+      var bb = document.createElement("button"); bb.className = "btn go-small";
+      bb.textContent = "Back to live";
+      bb.addEventListener("click", function(){ browsing=false; viewIdx=S.liveIndex; render(); });
+      J.appendChild(t2); J.appendChild(bb);
+    } else J.classList.add("hide");
+  }
+  syncChip();
+}
+
+function paintHeader(){
+  $("showname").textContent = S.show;
+  var isSM = role === "sm";
+  if(!isSM) editing = false;
+  $("btn-role").textContent = isSM ? "Stage manager" : "Crew";
+  var pm = $("plan-mode");
+  pm.textContent = editing ? "Editing" : (browsing ? "Looking ahead" : "Live");
+  pm.className = "mode " + (editing ? "edit" : (browsing ? "ahead" : "live"));
+  $("btn-routes").textContent = showRoutes ? "Routes on" : "Routes off";
+  $("btn-dim").textContent = DIMS[dimIdx].label;
+  $("btn-wake").textContent = !wakeOk ? "No screen lock" : (wakeWanted ? "Screen stays on" : "Screen sleeps");
+  $("btn-wake").disabled = !wakeOk;
+}
+
+/* A call that did not reach the other devices must not be a toast that
+   fades. It stays until the SM retries or accepts it. */
+function paintAlert(){
+  var a = $("alert");
+  if(callFail === null){ a.classList.add("hide"); a.innerHTML = ""; return; }
+  a.classList.remove("hide"); a.innerHTML = "";
+  var m = document.createElement("div"); m.className = "msg";
+  var sc = sceneAt(callFail);
+  m.textContent = "Not sent — the crew is still on the scene before this one. "
+    + "You are on " + (callFail+1) + ". " + (sc ? sc.name : "") + "; their phones are not.";
+  var retry = document.createElement("button");
+  retry.textContent = "Send again";
+  retry.addEventListener("click", async function(){
+    retry.disabled = true; retry.textContent = "Sending…";
+    S.liveStamp = Date.now();
+    var ok = await publish();
+    if(ok) callFail = null;
+    render();
+  });
+  var dismiss = document.createElement("button");
+  dismiss.textContent = "Call it by headset";
+  dismiss.addEventListener("click", function(){ callFail = null; render(); });
+  a.appendChild(m); a.appendChild(retry); a.appendChild(dismiss);
+}
+
+/* Crew stand on one side. Let them cut the list to their own traffic. */
+function moveMatches(m){
+  if(mvFilter === "all" || m.kind === "curtain") return true;
+  var want = mvFilter === "sr" ? "R" : "L";
+  var sides = [];
+  if(m.from) sides.push(SIDE[m.from.zone]);
+  if(m.to)   sides.push(SIDE[m.to.zone]);
+  if(sides.indexOf(want) >= 0) return true;
+  return sides.length > 0 && sides.every(function(s){ return s === "C"; });
+}
+function paintFilter(){
+  var box = $("mvfilter"); box.innerHTML = "";
+  [["all","All"],["sr","SR side"],["sl","SL side"]].forEach(function(o){
+    var b = document.createElement("button");
+    b.textContent = o[1];
+    if(mvFilter === o[0]) b.className = "on";
+    b.addEventListener("click", function(){
+      mvFilter = o[0]; LS.set("mvfilter", mvFilter); render();
+    });
+    box.appendChild(b);
+  });
+}
+
+function paintRail(){
+  var rail = $("strip"); rail.innerHTML = "";
+  S.scenes.forEach(function(sc, i){
+    var b = document.createElement("button");
+    b.className = "sc" + (i===viewIdx?" cur":"") + (i===S.liveIndex?" livesc":"");
+    var n = document.createElement("div"); n.className = "n";
+    n.textContent = (i+1) + (i===S.liveIndex ? " LIVE" : "");
+    var t = document.createElement("div"); t.className = "t"; t.textContent = sc.name;
+    b.appendChild(n); b.appendChild(t);
+    b.addEventListener("click", function(){
+      viewIdx = i; browsing = i !== S.liveIndex; selected = null; render();
+      if(b.scrollIntoView) b.scrollIntoView({ block:"nearest", inline:"center" });
+    });
+    rail.appendChild(b);
+  });
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+function paintMoves(allMoves){
+  var box = $("moves"); box.innerHTML = "";
+  var moves = allMoves.filter(moveMatches);
+  $("mvcount").textContent = moves.length + (moves.length !== allMoves.length ? " / " + allMoves.length : "");
+  if(!moves.length){
+    var msg;
+    if(allMoves.length) msg = "Nothing on this side. " + allMoves.length + " move"
+      + (allMoves.length>1?"s":"") + " on the other side — switch the filter to All to see them.";
+    else if(viewIdx === 0) msg = "Scene 1 is the preset. This is where every piece starts before the house opens.";
+    else msg = "Nothing moves into this scene. The stage stays exactly as it is.";
+    box.innerHTML = '<div class="empty">' + esc(msg) + '</div>';
+    return;
+  }
+  moves.forEach(function(m){
+    var d = document.createElement("button"); d.className = "mv";
+    var sw = document.createElement("div"); sw.className = "sw";
+    var tx = document.createElement("div"); tx.className = "txt";
+    if(m.kind === "curtain"){
+      sw.style.background = "var(--gel-rose)";
+      tx.innerHTML = '<div class="nm"><span class="verb">Curtain</span>' + esc(m.text) + '</div>'
+                   + '<div class="path">' + esc(m.sub) + '</div>';
+      d.appendChild(sw); d.appendChild(tx); box.appendChild(d); return;
+    }
+    sw.style.background = m.piece.color;
+    var verb = { on:"Bring on", off:"Strike", shift:"Reposition", trav:"Move" }[m.kind];
+    var nm = document.createElement("div"); nm.className = "nm";
+    nm.innerHTML = '<span class="verb">'+verb+'</span>' + esc(m.piece.name);
+    var path = document.createElement("div"); path.className = "path";
+    function z(text, cls){ var s=document.createElement("span"); s.className="z"+(cls?" "+cls:""); s.textContent=text; return s; }
+    function arrow(){ var s=document.createElement("span"); s.className="ar"; s.textContent="→"; return s; }
+    if(m.from) path.appendChild(z(zoneLabel(m.from)));
+    if(m.r && m.r.via.length) m.r.via.forEach(function(v){ path.appendChild(arrow()); path.appendChild(z(v,"via")); });
+    if(m.from) path.appendChild(arrow());
+    path.appendChild(z(m.to ? zoneLabel(m.to) : "Out of play"));
+    tx.appendChild(nm); tx.appendChild(path);
+    if(m.to && m.to.note){ var hn=document.createElement("div"); hn.className="hint"; hn.textContent=m.to.note; tx.appendChild(hn); }
+    d.appendChild(sw); d.appendChild(tx);
+    d.addEventListener("click", function(){ selected = m.piece.id; render(); });
+    box.appendChild(d);
+  });
+}
+
+function paintNotes(){
+  var sc = sceneAt(viewIdx), box = $("notes");
+  box.innerHTML = "";
+  if(!sc){ box.innerHTML = '<div class="help">Add a scene to get started.</div>'; return; }
+  if(role === "sm"){
+    var ta = document.createElement("textarea");
+    ta.value = sc.note || ""; ta.placeholder = "What the crew needs to know for this scene.";
+    ta.addEventListener("input", function(){ sc.note = ta.value; markDirty(); });
+    box.appendChild(ta);
+    var r = document.createElement("div"); r.className = "row"; r.style.marginTop = "9px";
+    var seg = document.createElement("div"); seg.className = "seg";
+    [["Curtain open","open"],["Curtain closed","closed"]].forEach(function(o){
+      var b = document.createElement("button"); b.textContent = o[0];
+      if((sc.curtain||"open") === o[1]) b.className = "on";
+      b.addEventListener("click", function(){ sc.curtain = o[1]; markDirty(); render(); });
+      seg.appendChild(b);
+    });
+    r.appendChild(seg); box.appendChild(r);
+  } else {
+    var p = document.createElement("div"); p.style.fontSize = "13.5px";
+    p.textContent = sc.note || "No notes for this scene.";
+    if(!sc.note) p.style.color = "var(--dim)";
+    box.appendChild(p);
+    var c = document.createElement("div"); c.className = "help"; c.style.marginTop = "8px";
+    c.textContent = (sc.curtain === "closed") ? "Curtain is in for this scene." : "Curtain is out for this scene.";
+    box.appendChild(c);
+  }
+}
+
+function paintInspector(){
+  var box = $("inspector"); box.innerHTML = "";
+  var sc = sceneAt(viewIdx);
+  if(!sc) return;
+  if(!selected){
+    var h = document.createElement("div"); h.className = "help";
+    h.textContent = editing
+      ? "Drag a piece to place it. Drop it on the stage grid, in a wing, or on the aux stage — where you drop it in a wing is where the crew will go looking for it."
+      : "Tap any piece for its exact spot and note.";
+    box.appendChild(h); return;
+  }
+  var p = pieceById(selected), pl = sc.place[selected];
+  if(!p){ selected = null; return; }
+  var r1 = document.createElement("div"); r1.className = "row";
+  var sw = document.createElement("div"); sw.style.cssText = "width:13px;height:13px;flex:none;background:"+p.color;
+  var nm = document.createElement("div"); nm.innerHTML = "<b>"+esc(p.name)+"</b>";
+  var zn = document.createElement("span"); zn.className = "tag"; zn.textContent = zoneLabel(pl);
+  var close = document.createElement("button"); close.className = "lnk"; close.textContent = "Close";
+  close.style.marginLeft = "auto"; close.addEventListener("click", function(){ selected=null; render(); });
+  r1.appendChild(sw); r1.appendChild(nm); r1.appendChild(zn); r1.appendChild(close);
+  box.appendChild(r1);
+
+  if(role === "sm"){
+    var r2 = document.createElement("div"); r2.className = "row";
+    var lab = document.createElement("label"); lab.className = "f";
+    lab.innerHTML = "<span>Exact spot / handling note</span>";
+    var inp = document.createElement("input"); inp.type = "text";
+    inp.value = pl ? (pl.note||"") : "";
+    inp.placeholder = "against the back wall, upstage of leg 2";
+    inp.disabled = !pl;
+    inp.addEventListener("input", function(){ if(pl){ pl.note = inp.value; markDirty(); } });
+    lab.appendChild(inp); r2.appendChild(lab); box.appendChild(r2);
+
+    var r3 = document.createElement("div"); r3.className = "row";
+    if(pl){
+      r3.appendChild(mkbtn(pl.r ? "Turn upright" : "Turn 90°", "btn", function(){ pl.r = pl.r?0:90; markDirty(); render(); }));
+      r3.appendChild(mkbtn("Take out of this scene", "btn hot", function(){
+        delete sc.place[selected]; selected=null; markDirty(); render();
+      }));
+    } else {
+      r3.appendChild(mkbtn("Put in this scene (wing SR)", "btn go-small", function(){
+        sc.place[selected] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" }; markDirty(); render();
+      }));
+    }
+    box.appendChild(r3);
+  } else if(pl && pl.note){
+    var n = document.createElement("div"); n.className = "help"; n.style.marginTop = "8px";
+    n.textContent = pl.note; box.appendChild(n);
+  }
+}
+function mkbtn(label, cls, fn){ var b=document.createElement("button"); b.textContent=label; b.className=cls||"btn"; b.addEventListener("click",fn); return b; }
+function ruleEl(){ var d=document.createElement("div"); d.className="rule"; return d; }
+
+function paintEditor(){
+  var body = $("editbody");
+  if(role !== "sm"){ $("editcard").classList.add("hide"); return; }
+  $("editcard").classList.remove("hide");
+  if(body.classList.contains("hide")) return;
+  body.innerHTML = "";
+  var sc = sceneAt(viewIdx);
+
+  var r0 = document.createElement("div"); r0.className = "row";
+  var l0 = document.createElement("label"); l0.className = "f"; l0.innerHTML = "<span>Production</span>";
+  var i0 = document.createElement("input"); i0.type="text"; i0.value = S.show;
+  i0.addEventListener("input", function(){ S.show=i0.value; markDirty(); $("showname").textContent=S.show; });
+  l0.appendChild(i0); r0.appendChild(l0); body.appendChild(r0);
+
+  var rE = document.createElement("div"); rE.className = "row"; rE.style.marginTop="9px";
+  rE.appendChild(mkbtn(editing ? "Stop dragging pieces" : "Drag pieces on the plan", editing?"btn go-small":"btn", function(){
+    editing = !editing; if(!editing) selected = null; render();
+  }));
+  if(dirty) rE.appendChild(mkbtn("Save & sync", "btn go-small", function(){ publish(); }));
+  body.appendChild(rE);
+
+  body.appendChild(ruleEl());
+
+  var sh = document.createElement("div"); sh.className = "tag"; sh.textContent = "Scenes"; body.appendChild(sh);
+  if(sc){
+    var rs = document.createElement("div"); rs.className = "row"; rs.style.marginTop="7px";
+    var ls = document.createElement("label"); ls.className = "f";
+    ls.innerHTML = "<span>Name of scene "+(viewIdx+1)+"</span>";
+    var isn = document.createElement("input"); isn.type="text"; isn.value = sc.name;
+    isn.addEventListener("input", function(){ sc.name=isn.value; markDirty(); paintRail(); paintDeck(); });
+    ls.appendChild(isn); rs.appendChild(ls); body.appendChild(rs);
+  }
+  var rsb = document.createElement("div"); rsb.className = "row";
+  rsb.appendChild(mkbtn("Add scene after this", "btn go-small", function(){
+    var base = sceneAt(viewIdx);
+    var copy = { id:"s"+Date.now(), name:"New scene", note:"", curtain: base?base.curtain:"open",
+                 place: base ? JSON.parse(JSON.stringify(base.place)) : {} };
+    S.scenes.splice(viewIdx+1, 0, copy);
+    if(S.liveIndex > viewIdx) S.liveIndex++;
+    viewIdx += 1; browsing = viewIdx !== S.liveIndex; markDirty(); render();
+  }));
+  rsb.appendChild(mkbtn("Move earlier", "btn", function(){ moveScene(-1); }));
+  rsb.appendChild(mkbtn("Move later", "btn", function(){ moveScene(1); }));
+  body.appendChild(rsb);
+  var hint = document.createElement("div"); hint.className="help"; hint.style.marginTop="7px";
+  hint.textContent = "A new scene starts as a copy of this one, so you only change what actually moves.";
+  body.appendChild(hint);
+
+  var rdel = document.createElement("div"); rdel.className="row"; rdel.style.marginTop="9px";
+  rdel.appendChild(mkbtn("Delete scene "+(viewIdx+1), "btn hot", function(){
+    if(S.scenes.length<=1){ toast("Keep at least one scene."); return; }
+    confirmAsk("Delete scene " + (viewIdx+1) + "?", (sceneAt(viewIdx)||{}).name + " and its placements are removed. This cannot be undone.", function(){
+      S.scenes.splice(viewIdx,1);
+      if(S.liveIndex >= S.scenes.length) S.liveIndex = S.scenes.length-1;
+      viewIdx = Math.min(viewIdx, S.scenes.length-1);
+      browsing = viewIdx !== S.liveIndex; selected = null; markDirty(); render();
+    });
+  }));
+  body.appendChild(rdel);
+
+  body.appendChild(ruleEl());
+
+  var ph = document.createElement("div"); ph.className = "tag"; ph.textContent = "Set pieces"; body.appendChild(ph);
+  var list = document.createElement("div"); list.className = "plist"; list.style.marginTop="7px";
+  if(!S.pieces.length){
+    var e0 = document.createElement("div"); e0.className="empty"; e0.textContent = "No pieces yet. Add your first one below.";
+    list.appendChild(e0);
+  }
+  S.pieces.forEach(function(p){
+    var it = document.createElement("div"); it.className = "pitem";
+    var sw = document.createElement("div"); sw.className="sw"; sw.style.background = p.color;
+    var nm = document.createElement("div"); nm.className="nm"; nm.textContent = p.name;
+    var zn = document.createElement("div"); zn.className="zn";
+    zn.textContent = sc && sc.place[p.id] ? zoneLabel(sc.place[p.id]) : "not in scene";
+    it.appendChild(sw); it.appendChild(nm); it.appendChild(zn);
+    it.appendChild(mkbtn("Select","lnk",function(){ selected=p.id; render(); }));
+    it.appendChild(mkbtn("×","lnk",function(){
+      confirmAsk("Remove " + p.name + "?", "It is taken out of every scene in the show.", function(){
+        S.pieces = S.pieces.filter(function(q){ return q.id!==p.id; });
+        S.scenes.forEach(function(s){ delete s.place[p.id]; });
+        if(selected===p.id) selected=null;
+        markDirty(); render();
+      });
+    }));
+    list.appendChild(it);
+  });
+  body.appendChild(list);
+
+  var rn = document.createElement("div"); rn.className="row"; rn.style.marginTop="9px";
+  var np = document.createElement("input"); np.type="text"; np.placeholder="New piece name"; np.style.flex="1 1 130px";
+  var nw = document.createElement("input"); nw.type="text"; nw.placeholder="w"; nw.style.cssText="width:52px;flex:none";
+  var nh = document.createElement("input"); nh.type="text"; nh.placeholder="d"; nh.style.cssText="width:52px;flex:none";
+  rn.appendChild(np); rn.appendChild(nw); rn.appendChild(nh);
+  rn.appendChild(mkbtn("Add","btn go-small",function(){
+    var name = np.value.trim();
+    if(!name){ toast("Give the piece a name first."); np.focus(); return; }
+    var w = Math.max(16, Math.min(280, parseInt(nw.value,10) || 80));
+    var h = Math.max(16, Math.min(280, parseInt(nh.value,10) || 45));
+    var palette = ["#C1683B","#4E8C6A","#6D7BC4","#9C5AA8","#B0913F","#3F8AA0","#B8474C","#7E6BB5"];
+    var p = { id:"p"+Date.now(), name:name, w:w, h:h, color:palette[S.pieces.length % palette.length] };
+    S.pieces.push(p);
+    var s = sceneAt(viewIdx); if(s) s.place[p.id] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" };
+    np.value=""; nw.value=""; nh.value="";
+    selected = p.id; markDirty(); render();
+  }));
+  body.appendChild(rn);
+  var ph2 = document.createElement("div"); ph2.className="help"; ph2.style.marginTop="6px";
+  ph2.textContent = "w is width across, d is depth upstage to downstage, roughly to scale — the stage box is 600 wide.";
+  body.appendChild(ph2);
+
+  body.appendChild(ruleEl());
+
+  var rp = document.createElement("div"); rp.className = "row";
+  rp.appendChild(mkbtn("Print run sheet", "btn", function(){
+    buildSheet();
+    setTimeout(function(){ window.print(); }, 60);
+  }));
+  rp.appendChild(mkbtn("Start a new show", "btn hot", function(){
+    confirmAsk("Start a new show?",
+      "Every scene, piece and note in “" + S.show + "” is cleared and cannot be brought back. "
+      + "Print the run sheet first if you want a copy.",
+      function(){
+        S = { rev: S.rev, show: "New production", liveIndex: 0, liveStamp: Date.now(), pieces: [],
+              scenes: [{ id:"s"+Date.now(), name:"Preshow", note:"", curtain:"closed", place:{} }] };
+        viewIdx = 0; browsing = false; selected = null; callFail = null;
+        markDirty(); render();
+        toast("Empty show ready. Add your pieces, then place them scene by scene.");
+      }, "Clear everything", "Cancel");
+  }));
+  body.appendChild(rp);
+  var ph3 = document.createElement("div"); ph3.className = "help"; ph3.style.marginTop="6px";
+  ph3.textContent = "The run sheet prints every scene and its moves in order — worth having on the callboard when the wifi drops.";
+  body.appendChild(ph3);
+}
+function moveScene(dir){
+  var j = viewIdx + dir;
+  if(j<0 || j>=S.scenes.length) return;
+  var liveSc = S.scenes[S.liveIndex];
+  var liveId = liveSc ? liveSc.id : null;
+  var tmp = S.scenes[viewIdx]; S.scenes[viewIdx] = S.scenes[j]; S.scenes[j] = tmp;
+  viewIdx = j;
+  for(var k=0;k<S.scenes.length;k++) if(S.scenes[k].id===liveId) S.liveIndex = k;
+  browsing = viewIdx !== S.liveIndex;
+  markDirty(); render();
+}
+
+/* ---------- run sheet (paper backup) ---------- */
+function buildSheet(){
+  var el = $("runsheet"); el.innerHTML = "";   // never $("sheet") — that is the stylesheet
+  var h = document.createElement("h1"); h.className = "big"; h.textContent = S.show;
+  var meta = document.createElement("div"); meta.className = "meta";
+  meta.textContent = "Set change run sheet · " + S.scenes.length + " scenes · "
+    + S.pieces.length + " pieces · printed " + new Date().toLocaleDateString();
+  el.appendChild(h); el.appendChild(meta);
+
+  S.scenes.forEach(function(sc, i){
+    var blk = document.createElement("div"); blk.className = "blk";
+    var hd = document.createElement("div"); hd.className = "hd2";
+    var no = document.createElement("span"); no.className = "no big"; no.textContent = (i+1) + ".";
+    var nm = document.createElement("span"); nm.className = "nmx"; nm.textContent = sc.name;
+    var cu = document.createElement("span"); cu.className = "cur";
+    cu.textContent = sc.curtain === "closed" ? "curtain in" : "curtain out";
+    hd.appendChild(no); hd.appendChild(nm); hd.appendChild(cu);
+    blk.appendChild(hd);
+    if(sc.note){ var nt = document.createElement("div"); nt.className = "nt"; nt.textContent = sc.note; blk.appendChild(nt); }
+
+    var moves = movesBetween(sceneAt(i-1), sc);
+    if(!moves.length){
+      var none = document.createElement("div"); none.className = "none";
+      none.textContent = i === 0 ? "Preset — see placements below." : "No change.";
+      blk.appendChild(none);
+    } else {
+      var ol = document.createElement("ol");
+      moves.forEach(function(m){
+        var li = document.createElement("li");
+        if(m.kind === "curtain"){ li.textContent = m.text + " — " + m.sub; ol.appendChild(li); return; }
+        var verb = { on:"Bring on", off:"Strike", shift:"Reposition", trav:"Move" }[m.kind];
+        var path = (m.from ? zoneLabel(m.from) : "off");
+        if(m.r && m.r.via.length) path += " → " + m.r.via.join(" → ");
+        path += " → " + (m.to ? zoneLabel(m.to) : "out of play");
+        li.textContent = verb + " " + m.piece.name + ": " + path + (m.to && m.to.note ? "  (" + m.to.note + ")" : "");
+        ol.appendChild(li);
+      });
+      blk.appendChild(ol);
+    }
+    if(i === 0){
+      var ol2 = document.createElement("ol");
+      S.pieces.forEach(function(p){
+        var pl = sc.place[p.id]; if(!pl) return;
+        var li = document.createElement("li");
+        li.textContent = p.name + ": " + zoneLabel(pl) + (pl.note ? "  (" + pl.note + ")" : "");
+        ol2.appendChild(li);
+      });
+      if(ol2.children.length) blk.appendChild(ol2);
+    }
+    el.appendChild(blk);
+  });
+}
+
+/* ---------- modals ---------- */
+function confirmAsk(title, body, onYes, yesLabel, noLabel){
+  var scrim = document.createElement("div"); scrim.className = "scrim";
+  var m = document.createElement("div"); m.className = "modal";
+  var h = document.createElement("h3"); h.textContent = title;
+  var p = document.createElement("div"); p.className = "help"; p.textContent = body;
+  var r = document.createElement("div"); r.className = "row"; r.style.marginTop = "16px";
+  var no = mkbtn(noLabel || "Keep it", "btn", function(){ scrim.remove(); });
+  var yes = mkbtn(yesLabel || "Delete", "btn hot", function(){ scrim.remove(); onYes(); });
+  r.appendChild(no); r.appendChild(yes);
+  m.appendChild(h); m.appendChild(p); m.appendChild(r);
+  scrim.appendChild(m); document.body.appendChild(scrim);
+  no.focus();
+}
+function askRole(force){
+  if(role && !force) return;
+  var scrim = document.createElement("div"); scrim.className = "scrim";
+  var m = document.createElement("div"); m.className = "modal";
+  var h = document.createElement("h3"); h.textContent = "Who is on this device?";
+  var p = document.createElement("div"); p.className = "help";
+  p.textContent = "The stage manager and director build the show and call the scenes. Everyone else follows along.";
+  m.appendChild(h); m.appendChild(p);
+  var pick = document.createElement("div"); pick.className = "pick";
+  function opt(title, sub, val){
+    var b = document.createElement("button");
+    var t = document.createElement("b"); t.textContent = title;
+    var s = document.createElement("span"); s.textContent = sub;
+    b.appendChild(t); b.appendChild(s);
+    b.addEventListener("click", function(){
+      role = val; LS.set("role", role);
+      if(role !== "sm") editing = false;
+      scrim.remove(); render();
+    });
+    pick.appendChild(b);
+  }
+  opt("Stage manager or director", "Build scenes, place pieces, call the show.", "sm");
+  opt("Crew", "Follow the called scene and see what moves where.", "crew");
+  m.appendChild(pick);
+  if(force){
+    var r = document.createElement("div"); r.className="row"; r.style.marginTop="14px";
+    r.appendChild(mkbtn("Cancel", "btn", function(){ scrim.remove(); }));
+    m.appendChild(r);
+  }
+  scrim.appendChild(m); document.body.appendChild(scrim);
+}
+
+/* ---------- master render ---------- */
+function render(){
+  var sc = sceneAt(viewIdx), prev = sceneAt(viewIdx-1);
+  var moves = movesBetween(prev, sc);
+  paintHeader();
+  paintAlert();
+  paintDeck();
+  paintRail();
+  paintFilter();
+  drawPieces(sc);
+  drawRoutes(moves);
+  setCurtain(sc ? sc.curtain === "open" : true, false);
+  paintMoves(moves);
+  paintNotes();
+  paintInspector();
+  paintEditor();
+}
+function replay(){
+  var sc = sceneAt(viewIdx), prev = sceneAt(viewIdx-1);
+  if(!prev){ toast("This is the first scene — nothing moves into it."); return; }
+  animateTransition(prev, sc);
+}
+
+/* ---------- wire up ---------- */
+buildPlan();
+$("btn-role").addEventListener("click", function(){ askRole(true); });
+$("btn-replay").addEventListener("click", replay);
+$("btn-dim").addEventListener("click", function(){
+  dimIdx = (dimIdx + 1) % DIMS.length; LS.set("dim", dimIdx); applyDim();
+});
+$("btn-wake").addEventListener("click", function(){
+  wakeWanted = !wakeWanted; LS.set("wake", wakeWanted); applyWake();
+});
+$("btn-routes").addEventListener("click", function(){ showRoutes = !showRoutes; LS.set("routes", showRoutes); render(); });
+$("btn-editopen").addEventListener("click", function(){
+  var b = $("editbody"); var nowHidden = b.classList.toggle("hide");
+  $("btn-editopen").textContent = nowHidden ? "Open" : "Close";
+  if(!nowHidden) paintEditor();
+});
+document.addEventListener("keydown", function(e){
+  if(e.target && /input|textarea/i.test(e.target.tagName)) return;
+  if(role!=="sm" || browsing) return;
+  if(e.key==="ArrowRight" || e.key===" ") { e.preventDefault(); callScene(S.liveIndex+1); }
+  if(e.key==="ArrowLeft") callScene(S.liveIndex-1);
+});
+
+render();
+applyDim();
+if(wakeWanted) applyWake();
+askRole(false);
+
+if(S.liveStamp && S.liveStamp !== lastSeen){
+  LS.set("lastSeen", S.liveStamp);
+  if(S.liveIndex === viewIdx) setTimeout(replay, 140);
+}
+
+(async function(){
+  try{
+    var cap = await (window.claude && window.claude.use ? window.claude.use("artifact") : Promise.resolve(null));
+    if(cap){ api = cap; apiState = "live"; } else { apiState = "local"; }
+  }catch(e){ apiState = "local"; }
+  syncChip();
+})();
+})();
+</script>
