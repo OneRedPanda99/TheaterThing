@@ -1,0 +1,61 @@
+# Publishes the site to GitHub Pages.
+#
+# Required when the repo's Pages source is set to "GitHub Actions" (Settings ->
+# Pages -> Source). In that mode nothing is ever served unless a workflow
+# uploads and deploys an artifact — enabling Pages alone leaves the URL at 404,
+# with no "pages build and deployment" run to explain why.
+#
+# The site is a single generated file, so the tests and the drift check run
+# first: a broken index.html should fail here rather than reach the crew.
+
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a run finish rather than cancelling it mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run check:pages
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
