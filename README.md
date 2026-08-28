@@ -1,5 +1,7 @@
 # Ghost Light
 
+[![tests](https://github.com/OneRedPanda99/TheaterThing/actions/workflows/tests.yml/badge.svg)](https://github.com/OneRedPanda99/TheaterThing/actions/workflows/tests.yml)
+
 A live set-piece tracker for a theatre crew. The stage manager calls a scene; every
 connected phone follows and plays an animated ground plan showing what moves where.
 
@@ -78,13 +80,18 @@ still opens directly.
 ### Tests
 
 ```bash
-npm install
+npm ci
 npm test
 ```
 
 37 checks covering route derivation, move-list generation, the command deck's
 positional guarantees, backstage modes, failed-call handling, the print sheet, and the
 self-rebuild round trip.
+
+They run on every push and pull request to `main` against Node 20 and 22
+(`.github/workflows/tests.yml`). The suite boots the page in a headless DOM, so a
+change that breaks the plan, the move derivation, or the self-rebuild fails CI rather
+than surfacing during a performance.
 
 ## Known limits
 
