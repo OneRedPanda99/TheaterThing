@@ -19,6 +19,10 @@ async function stepA(name, fn) {
   catch (e) { console.log("  FAIL " + name + " :: " + e.message); errors.push(name + ": " + e.message); }
 }
 const tick = () => new Promise(r => setTimeout(r, 0));
+function viewIndexOf(doc) {
+  const cur = doc.querySelector("#strip .sc.cur");
+  return cur ? [...doc.querySelectorAll("#strip .sc")].indexOf(cur) : 0;
+}
 function step(name, fn) {
   try { fn(); console.log("  ok   " + name); }
   catch (e) { console.log("  FAIL " + name + " :: " + e.message); errors.push(name + ": " + e.message); }
@@ -189,15 +193,17 @@ setTimeout(async () => {
     const n = d.querySelectorAll(".deck button").length;
     if (n > 3) throw new Error(n + " controls competing for attention");
   });
-  step("crew sees a flat read-out, not a tappable GO", () => {
+  step("crew get no GO button and no duplicated scene read-out", () => {
     d.getElementById("btn-role").click();
-    d.querySelectorAll(".pick button")[1].click();        // crew
-    if (d.querySelector("#slotR .go")) throw new Error("crew can call the show");
-    const ro = d.querySelector("#slotR .readout");
-    if (!ro) throw new Error("no read-out");
-    if (d.querySelector("#editcard").classList.contains("hide") === false) throw new Error("crew can see Build");
+    d.querySelectorAll(".scrim .pick button")[1].click();          // become Crew
+    if (d.querySelector("#slotR .go")) throw new Error("crew can tap the show forward");
+    if (d.querySelector(".readout")) throw new Error("scene is stated twice on screen");
+    const head = d.getElementById("scenehead").textContent;
+    if (!/on stage now|looking ahead/i.test(head)) throw new Error("crew cannot see the current scene");
+    if (!d.getElementById("editcard").classList.contains("hide")) throw new Error("crew are offered Build the show");
+    if (!d.getElementById("demobar").classList.contains("hide")) throw new Error("crew get the demo prompt");
     d.getElementById("btn-role").click();
-    d.querySelectorAll(".pick button")[0].click();        // back to SM
+    d.querySelectorAll(".scrim .pick button")[0].click();          // back to SM for later steps
   });
 
   console.log("--- backstage conditions ---");
@@ -252,6 +258,51 @@ setTimeout(async () => {
     [...d.querySelectorAll("#mvfilter button")].find(b => b.textContent === "All").click();
   });
 
+  console.log("--- a quiet screen ---");
+  step("header carries only the status and one More button", () => {
+    const controls = [...d.querySelectorAll(".hd button")];
+    if (controls.length !== 1) throw new Error(controls.length + " buttons in the header: " + controls.map(b=>b.textContent).join("/"));
+    if (!/more/i.test(controls[0].textContent)) throw new Error("the one button is: " + controls[0].textContent);
+  });
+  step("the stage map is hidden until asked for", () => {
+    if (d.body.classList.contains("mapon")) throw new Error("map is on by default");
+    d.getElementById("btn-map").click();
+    if (!d.body.classList.contains("mapon")) throw new Error("toggle did not show the map");
+    if (!/hide stage map/i.test(d.getElementById("btn-map").textContent)) throw new Error("label did not flip");
+    d.getElementById("btn-map").click();
+    if (d.body.classList.contains("mapon")) throw new Error("toggle did not hide it again");
+  });
+  step("the current scene is stated plainly at the top", () => {
+    const state = JSON.parse(d.getElementById("state").textContent);
+    const head = d.getElementById("scenehead");
+    const expected = state.scenes[viewIndexOf(d)].name;
+    if (!head.textContent.includes(expected)) throw new Error("scene head says: " + head.textContent.slice(0,60));
+    if (!/on stage now|looking ahead/i.test(head.textContent)) throw new Error("no plain-language status line");
+  });
+  step("everything else is behind More, closed by default", () => {
+    const sheet = d.getElementById("msheet");
+    if (!sheet.classList.contains("hide")) throw new Error("drawer starts open");
+    for (const id of ["strip", "notes", "editcard", "mvfilter", "btn-dim", "btn-wake", "btn-role"]) {
+      if (!sheet.contains(d.getElementById(id))) throw new Error("#" + id + " is not inside the More drawer");
+    }
+    d.getElementById("btn-more").click();
+    if (sheet.classList.contains("hide")) throw new Error("More did not open");
+    d.getElementById("btn-moreclose").click();
+    if (!sheet.classList.contains("hide")) throw new Error("Done did not close it");
+  });
+  step("picking a scene closes the drawer so you can see it", () => {
+    d.getElementById("btn-more").click();
+    d.querySelectorAll("#strip .sc")[0].click();
+    if (!d.getElementById("msheet").classList.contains("hide")) throw new Error("drawer stayed open");
+  });
+  step("the demo show says so and offers a way out", () => {
+    const bar = d.getElementById("demobar");
+    if (bar.classList.contains("hide")) throw new Error("no demo notice on the sample show");
+    if (!/demo/i.test(bar.textContent)) throw new Error("bar says: " + bar.textContent.slice(0,60));
+    if (![...bar.querySelectorAll("button")].some(b => /start my own/i.test(b.textContent)))
+      throw new Error("no way to start your own show");
+  });
+
   console.log("--- paper backup + starting over ---");
   step("run sheet covers every scene in order", () => {
     d.getElementById("btn-editopen").click();              // ensure build panel open
@@ -277,8 +328,8 @@ setTimeout(async () => {
     [...d.querySelectorAll("#editbody button")].find(b => /Start a new show/.test(b.textContent)).click();
     const scrim = d.querySelector(".scrim");
     if (!scrim) throw new Error("no confirmation");
-    if (!/cannot be brought back/i.test(scrim.textContent)) throw new Error("warning too soft");
-    [...scrim.querySelectorAll("button")].find(b => /Clear everything/.test(b.textContent)).click();
+    if (!/cannot be undone/i.test(scrim.textContent)) throw new Error("warning too soft");
+    [...scrim.querySelectorAll("button")].find(b => /Clear the demo/.test(b.textContent)).click();
     if (d.querySelectorAll("#strip .sc").length !== 1) throw new Error("scenes not reset");
     if (d.querySelectorAll("#editbody .pitem").length !== 0) throw new Error("pieces not cleared");
     if (!/No pieces yet/i.test(d.getElementById("editbody").textContent)) throw new Error("no empty state for pieces");

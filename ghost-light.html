@@ -47,7 +47,7 @@ body{
   background:var(--ground); color:var(--ink);
   font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
-  padding-bottom:174px;
+  padding-bottom:118px;
 }
 .mono,.tag{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
 .big{font-family:"Big Shoulders Display","Big Shoulders",Oswald,"Arial Narrow",Impact,sans-serif;font-weight:800;letter-spacing:.005em}
@@ -239,6 +239,47 @@ label.f > span{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transfo
 .hide{display:none !important}
 
 /* ---------------------------------------------------------------
+   One screen, one question: what is happening right now.
+   Everything that is not the running show lives behind "More",
+   so nothing competes with the scene name and the move list.
+   --------------------------------------------------------------- */
+.now{padding:15px 16px 16px;border-bottom:1px solid var(--rule);background:var(--surface)}
+.now .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--work)}
+.now .k.ahead{color:var(--gel-congo)}
+.now .v{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:800;
+  font-size:38px;line-height:1;margin-top:3px;text-wrap:balance}
+@media(max-width:600px){.now .v{font-size:31px}}
+.now .v .num{color:var(--dim);margin-right:11px}
+.now .nt{font-size:13.5px;color:var(--dim);margin-top:8px;max-width:62ch}
+
+/* the sample show says so, and offers the way out, once */
+.demobar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 14px;
+  background:var(--sunk);border-bottom:1px solid var(--rule);font-size:13px}
+.demobar .msg{flex:1;min-width:180px;color:var(--dim)}
+
+/* map is off by default; the list is the thing you read under pressure */
+body:not(.mapon) .planpane{display:none}
+body:not(.mapon) .stagearea{grid-template-columns:minmax(0,1fr)}
+
+/* ---------------- the "More" drawer ---------------- */
+.msheet{position:fixed;inset:0;z-index:75;background:rgba(4,6,10,.6);display:flex;justify-content:flex-end}
+.mspanel{background:var(--ground);width:min(430px,100%);height:100%;overflow:auto;
+  border-left:1px solid var(--rule2);display:flex;flex-direction:column}
+.mshd{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:10px;padding:12px 14px}
+.mshd .ttl{font-family:"Big Shoulders Display","Big Shoulders",Oswald,Impact,sans-serif;font-weight:800;
+  font-size:20px;text-transform:uppercase;letter-spacing:.03em;line-height:1;flex:1}
+.msec{border-bottom:1px solid var(--rule);padding:13px 14px}
+.msec > .tag{display:block;margin-bottom:9px}
+/* scene list reads as a list in the drawer, not a horizontal rail */
+.msec .rail{flex-wrap:wrap;overflow-x:visible;border-bottom:0;gap:1px}
+.msec .sc{flex:1 1 46%;min-width:0;border:1px solid var(--rule)}
+.msec .pane-hd{padding-left:0;padding-right:0;background:none;border-bottom:0}
+.msec .pad{padding:0}
+.msec #editcard{border:0}
+
+/* ---------------------------------------------------------------
    Backstage dimmer. A phone at full brightness in the wings spills
    light into the house and kills night vision. Blackout also warms
    the screen toward red, which the dark-adapted eye tolerates.
@@ -282,13 +323,14 @@ label.f > span{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transfo
     <span class="wordmark">Ghost Light</span>
     <span class="prod" id="showname">—</span>
     <span class="sp"></span>
-    <button class="lnk" id="btn-dim">Bright</button>
-    <button class="lnk" id="btn-wake">Screen</button>
     <span class="stat" id="syncchip">Connecting</span>
-    <button class="lnk" id="btn-role">Role</button>
+    <button class="btn" id="btn-more">More</button>
   </header>
 
   <div class="alert hide" id="alert"></div>
+  <div class="demobar hide" id="demobar"></div>
+
+  <section class="now" id="scenehead"></section>
 
   <main class="stagearea">
     <section class="planpane">
@@ -305,27 +347,64 @@ label.f > span{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transfo
 
     <aside class="side">
       <section class="pane">
-        <div class="pane-hd"><span class="ttl">Change into this scene</span><span class="spacer"></span>
-          <span class="seg" id="mvfilter"></span>
+        <div class="pane-hd"><span class="ttl">What moves</span><span class="spacer"></span>
           <span class="cnt" id="mvcount">0</span></div>
         <div class="moves" id="moves"></div>
-      </section>
-      <section class="pane">
-        <div class="pane-hd"><span class="ttl">Scene notes</span></div>
-        <div class="pad" id="notes"></div>
-      </section>
-      <section class="pane" id="editcard">
-        <div class="pane-hd"><span class="ttl">Build the show</span><span class="spacer"></span>
-          <button class="lnk" id="btn-editopen">Open</button></div>
-        <div class="pad hide" id="editbody"></div>
       </section>
     </aside>
   </main>
 
   <div class="cmd">
     <div class="jump hide" id="jump"></div>
-    <div class="rail" id="strip"></div>
     <div class="deck"><div class="slotL" id="slotL"></div><div id="slotR"></div></div>
+  </div>
+
+  <div class="msheet hide" id="msheet">
+    <div class="mspanel">
+      <div class="mshd">
+        <span class="ttl">More</span>
+        <button class="btn" id="btn-moreclose">Done</button>
+      </div>
+
+      <div class="msec">
+        <span class="tag">Go to a scene</span>
+        <div class="rail" id="strip"></div>
+      </div>
+
+      <div class="msec">
+        <span class="tag">Stage map</span>
+        <div class="row"><button class="btn" id="btn-map">Show stage map</button></div>
+      </div>
+
+      <div class="msec">
+        <span class="tag">Screen</span>
+        <div class="row">
+          <button class="btn" id="btn-dim">Bright</button>
+          <button class="btn" id="btn-wake">Screen</button>
+        </div>
+      </div>
+
+      <div class="msec">
+        <span class="tag">Which moves to show</span>
+        <div class="row"><span class="seg" id="mvfilter"></span></div>
+      </div>
+
+      <div class="msec">
+        <span class="tag">Notes for this scene</span>
+        <div class="pad" id="notes"></div>
+      </div>
+
+      <div class="msec" id="editcard">
+        <span class="tag">Build the show</span>
+        <div class="row"><button class="btn" id="btn-editopen">Open</button></div>
+        <div class="pad hide" id="editbody"></div>
+      </div>
+
+      <div class="msec">
+        <span class="tag">This device</span>
+        <div class="row"><button class="btn" id="btn-role">Role</button></div>
+      </div>
+    </div>
   </div>
 
   <div class="sheet" id="runsheet"></div>
@@ -781,6 +860,61 @@ function applyDim(){
   paintHeader();
 }
 
+/* ---------- what is happening right now ----------
+   The one thing everyone opens the app to find out, stated plainly
+   and large, before any control.                                  */
+function paintSceneHead(){
+  var sc = sceneAt(viewIdx), box = $("scenehead");
+  box.innerHTML = "";
+  var k = document.createElement("div");
+  k.className = "k" + (browsing ? " ahead" : "");
+  k.textContent = browsing
+    ? "Looking ahead — the show is on scene " + (S.liveIndex+1)
+    : "On stage now";
+  var v = document.createElement("div"); v.className = "v";
+  v.innerHTML = '<span class="num">' + (viewIdx+1) + '</span>' + esc(sc ? sc.name : "No scenes yet");
+  box.appendChild(k); box.appendChild(v);
+  if(sc && sc.note){
+    var n = document.createElement("div"); n.className = "nt"; n.textContent = sc.note;
+    box.appendChild(n);
+  }
+}
+
+/* ---------- the map is opt-in ---------- */
+var mapOn = LS.get("map", false);
+function applyMap(){
+  document.body.classList.toggle("mapon", mapOn);
+  var b = $("btn-map");
+  if(b) b.textContent = mapOn ? "Hide stage map" : "Show stage map";
+}
+
+/* ---------- the More drawer ---------- */
+function openMore(){ $("msheet").classList.remove("hide"); paintEditor(); }
+function closeMore(){ $("msheet").classList.add("hide"); }
+
+/* ---------- the sample show announces itself, once ---------- */
+function startNewShow(){
+  confirmAsk("Start your own show?",
+    "The demo show is cleared so you can build your own. This cannot be undone.",
+    function(){
+      S = { rev:S.rev, show:"My show", demo:false, liveIndex:0, liveStamp:Date.now(), pieces:[],
+            scenes:[{ id:"s"+Date.now(), name:"Preshow", note:"", curtain:"closed", place:{} }] };
+      viewIdx = 0; browsing = false; selected = null; callFail = null;
+      markDirty(); closeMore(); render();
+      toast("Empty show ready. Open More, then Build the show, to add your pieces.");
+    }, "Clear the demo", "Cancel");
+}
+function paintDemoBar(){
+  var b = $("demobar");
+  if(!S.demo || role !== "sm" || LS.get("demoHidden", false)){ b.classList.add("hide"); return; }
+  b.classList.remove("hide"); b.innerHTML = "";
+  var m = document.createElement("div"); m.className = "msg";
+  m.textContent = "This is a demo show, so you can see how it works.";
+  b.appendChild(m);
+  b.appendChild(mkbtn("Start my own show", "btn go-small", startNewShow));
+  b.appendChild(mkbtn("Hide", "lnk", function(){ LS.set("demoHidden", true); paintDemoBar(); }));
+}
+
 /* ---------- command deck ----------
    Hick's law: during a run only three things are reachable —
    go back, go forward, look ahead. Everything else is behind a
@@ -832,12 +966,6 @@ function paintDeck(){
       viewIdx = Math.min(S.scenes.length-1, viewIdx+1); browsing = viewIdx !== S.liveIndex; render();
     }, viewIdx>=S.scenes.length-1);
 
-    var ro = document.createElement("div");
-    ro.className = "readout" + (browsing ? " away" : "");
-    var sc = sceneAt(viewIdx);
-    ro.innerHTML = '<span class="k">' + (browsing ? "Looking ahead — not live" : "Live now") + '</span>'
-      + '<span class="v"><span class="num">'+(viewIdx+1)+'</span>'+esc(sc?sc.name:"No scenes")+'</span>';
-    R.appendChild(ro);
 
     if(browsing){
       J.classList.remove("hide"); J.innerHTML = "";
@@ -924,8 +1052,9 @@ function paintRail(){
     var t = document.createElement("div"); t.className = "t"; t.textContent = sc.name;
     b.appendChild(n); b.appendChild(t);
     b.addEventListener("click", function(){
-      viewIdx = i; browsing = i !== S.liveIndex; selected = null; render();
-      if(b.scrollIntoView) b.scrollIntoView({ block:"nearest", inline:"center" });
+      viewIdx = i; browsing = i !== S.liveIndex; selected = null;
+      closeMore();                       // picking a scene means you want to see it
+      render();
     });
     rail.appendChild(b);
   });
@@ -1009,11 +1138,12 @@ function paintInspector(){
   var sc = sceneAt(viewIdx);
   if(!sc) return;
   if(!selected){
-    var h = document.createElement("div"); h.className = "help";
-    h.textContent = editing
-      ? "Drag a piece to place it. Drop it on the stage grid, in a wing, or on the aux stage — where you drop it in a wing is where the crew will go looking for it."
-      : "Tap any piece for its exact spot and note.";
-    box.appendChild(h); return;
+    if(editing){
+      var h = document.createElement("div"); h.className = "help";
+      h.textContent = "Drag a piece to where it goes.";
+      box.appendChild(h);
+    }
+    return;
   }
   var p = pieceById(selected), pl = sc.place[selected];
   if(!p){ selected = null; return; }
@@ -1174,18 +1304,7 @@ function paintEditor(){
     buildSheet();
     setTimeout(function(){ window.print(); }, 60);
   }));
-  rp.appendChild(mkbtn("Start a new show", "btn hot", function(){
-    confirmAsk("Start a new show?",
-      "Every scene, piece and note in “" + S.show + "” is cleared and cannot be brought back. "
-      + "Print the run sheet first if you want a copy.",
-      function(){
-        S = { rev: S.rev, show: "New production", liveIndex: 0, liveStamp: Date.now(), pieces: [],
-              scenes: [{ id:"s"+Date.now(), name:"Preshow", note:"", curtain:"closed", place:{} }] };
-        viewIdx = 0; browsing = false; selected = null; callFail = null;
-        markDirty(); render();
-        toast("Empty show ready. Add your pieces, then place them scene by scene.");
-      }, "Clear everything", "Cancel");
-  }));
+  rp.appendChild(mkbtn("Start a new show", "btn hot", startNewShow));
   body.appendChild(rp);
   var ph3 = document.createElement("div"); ph3.className = "help"; ph3.style.marginTop="6px";
   ph3.textContent = "The run sheet prints every scene and its moves in order — worth having on the callboard when the wifi drops.";
@@ -1308,6 +1427,8 @@ function render(){
   var moves = movesBetween(prev, sc);
   paintHeader();
   paintAlert();
+  paintDemoBar();
+  paintSceneHead();
   paintDeck();
   paintRail();
   paintFilter();
@@ -1328,6 +1449,12 @@ function replay(){
 /* ---------- wire up ---------- */
 buildPlan();
 $("btn-role").addEventListener("click", function(){ askRole(true); });
+$("btn-more").addEventListener("click", openMore);
+$("btn-moreclose").addEventListener("click", closeMore);
+$("msheet").addEventListener("click", function(e){ if(e.target === $("msheet")) closeMore(); });
+$("btn-map").addEventListener("click", function(){
+  mapOn = !mapOn; LS.set("map", mapOn); applyMap();
+});
 $("btn-replay").addEventListener("click", replay);
 $("btn-dim").addEventListener("click", function(){
   dimIdx = (dimIdx + 1) % DIMS.length; LS.set("dim", dimIdx); applyDim();
@@ -1348,7 +1475,9 @@ document.addEventListener("keydown", function(e){
   if(e.key==="ArrowLeft") callScene(S.liveIndex-1);
 });
 
+if(S.demo === undefined) S.demo = (S.show === "Spring Production");
 render();
+applyMap();
 applyDim();
 if(wakeWanted) applyWake();
 askRole(false);
