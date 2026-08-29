@@ -136,11 +136,47 @@ setTimeout(async () => {
     if (d.getElementById("editbody").classList.contains("hide")) throw new Error("did not open");
     if (!d.querySelectorAll("#editbody .pitem").length) throw new Error("no piece list");
   });
-  step("switch to edit mode from the build panel", () => {
-    const b = [...d.querySelectorAll("#editbody button")].find(x => /Drag pieces/.test(x.textContent));
-    if (!b) throw new Error("no drag-mode button");
+  step("Edit lives on the map, turns the map on, and becomes Save", () => {
+    d.body.classList.remove("mapon");
+    const b = d.getElementById("btn-edit");
+    if (!b) throw new Error("no Edit button in the plan header");
+    if (b.textContent !== "Edit") throw new Error("label starts as: " + b.textContent);
     b.click();
     if (!/Editing/.test(d.getElementById("plan-mode").textContent)) throw new Error("mode chip wrong");
+    if (!d.body.classList.contains("mapon")) throw new Error("Edit did not force the map on");
+    if (!/Save|Done/.test(b.textContent)) throw new Error("label did not flip, still: " + b.textContent);
+  });
+
+  step("a selected piece grows a resize handle, unselected ones do not", () => {
+    const pc = d.querySelector(".pc");
+    if (!pc) throw new Error("no pieces drawn on the plan");
+    pc.dispatchEvent(new w.Event("pointerdown", { bubbles: true }));
+    const sel = d.querySelector(".pc.sel");
+    if (!sel) throw new Error("nothing selected on the plan");
+    if (!sel.querySelector(".hgrip") || !sel.querySelector(".hdot"))
+      throw new Error("no corner handle on the selected piece");
+    const other = [...d.querySelectorAll(".pc")].find(g => !g.classList.contains("sel"));
+    if (other && other.querySelector(".hdot"))
+      throw new Error("handle drawn on an unselected piece");
+  });
+
+  step("the map opens showing the whole theatre, with Fit tucked away", () => {
+    const svg = d.querySelector("svg.plan");
+    if (!svg) throw new Error("no plan");
+    if (svg.getAttribute("viewBox") !== "0 0 1170 658")
+      throw new Error("does not start fitted: " + svg.getAttribute("viewBox"));
+    const fit = d.getElementById("btn-fit");
+    if (!fit) throw new Error("no Fit control");
+    if (!fit.classList.contains("hide"))
+      throw new Error("Fit is offered while already fitted");
+    // jsdom has no layout, so the zoom maths cannot run here; the pinch,
+    // wheel and pan paths are checked in a real browser instead.
+  });
+
+  step("leaving edit mode puts the map back the way it was", () => {
+    d.getElementById("btn-edit").click();                // Save / Done
+    if (/Editing/.test(d.getElementById("plan-mode").textContent)) throw new Error("still editing");
+    d.getElementById("btn-map").click();                 // map back off
   });
   step("add a scene copies this one", () => {
     const before = w.document.querySelectorAll("#strip .sc").length;
