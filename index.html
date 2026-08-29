@@ -114,7 +114,15 @@ body{
 /* The plan fits the screen it is on, and handles its own pinch and pan,
    so touch-action is off across the whole map. Scroll the page from
    outside it — the map is a fixed strip, not the length of the screen. */
-svg.plan{width:100%;height:auto;display:block;touch-action:none}
+svg.plan{width:100%;height:auto;aspect-ratio:1170/658;display:block;touch-action:none}
+/* On a phone the plan's own 1.78:1 shape left a 210px strip with the
+   whole theatre squeezed into it. Give the map a real block of screen
+   and let the viewBox match that shape instead, so zooming in has
+   somewhere to go. */
+@media(max-width:760px){
+  .planwrap{height:min(40vh,330px)}
+  svg.plan{height:100%;aspect-ratio:auto}
+}
 .zone-fill-stage{fill:var(--stage-fill)}
 .zone-fill-wing{fill:var(--wing-fill)}
 .zone-fill-aux{fill:var(--aux-fill)}
@@ -137,6 +145,9 @@ svg.plan{width:100%;height:auto;display:block;touch-action:none}
 .pc.grab{cursor:grab}
 /* Resize handle. The visible square is small enough not to hide the
    piece; the transparent square under it is a thumb-sized target. */
+.pc.dragging{cursor:grabbing}
+.pc.dragging rect{stroke:var(--work);stroke-width:2.5}
+.pc.dragging .cap{fill:var(--work)}
 .pc .hgrip{fill:transparent;cursor:nwse-resize}
 .pc .hdot{fill:var(--work);stroke:var(--work-ink);stroke-width:1.5;pointer-events:none}
 .pc rect{stroke-width:1.5}
@@ -192,6 +203,9 @@ label.f > span{font-family:var(--mono);font-size:10px;text-transform:uppercase;l
 .pitem .nm{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pitem .zn{font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap}
 .seg{display:inline-flex;border:1px solid var(--rule2)}
+.seg.zones{display:flex;flex-wrap:wrap;width:100%}
+.seg.zones button{flex:1 1 auto;border-right:1px solid var(--rule2)}
+.seg.zones button:last-child{border-right:0}
 .seg button{border:0;background:none;padding:7px 11px;font-size:12px;cursor:pointer;min-height:36px}
 .seg button.on{background:var(--work);color:var(--work-ink);font-weight:600}
 .rule{height:1px;background:var(--rule);margin:13px 0}
@@ -801,25 +815,41 @@ var MINSZ = 16, MAXSZ = 280;
    dragging any empty part of the theatre. Pieces stay the same
    physical size on screen no matter the zoom, because planScale()
    is derived from the live viewBox. */
-var AR = VB.h / VB.w;
 var view = { x:0, y:0, w:VB.w };
 var MINZW = VB.w / 9;                 // deepest zoom: about 9x
-function applyView(){
-  view.w = Math.max(MINZW, Math.min(VB.w, view.w));
-  var h = view.w * AR;
+/* The map's shape is set in CSS and differs between phone and desktop,
+   so the viewBox takes its aspect from the box rather than assuming the
+   plan's own. Everything below is expressed in plan units. */
+function curAR(){
+  var r = svg.getBoundingClientRect();
+  return (r.width && r.height) ? r.height / r.width : VB.h / VB.w;
+}
+function fitW(){                      // the width that shows the whole theatre
+  var ar = curAR(), w = VB.w;
+  if(w * ar < VB.h) w = VB.h / ar;    // box is wider than the plan: fit by height
+  return w;
+}
+function axis(v, size, total){        // centre it when it fits, clamp when it does not
   var pad = 40;
-  view.x = Math.max(-pad, Math.min(VB.w - view.w + pad, view.x));
-  view.y = Math.max(-pad, Math.min(VB.h - h + pad, view.y));
+  if(size >= total) return (total - size) / 2;
+  return Math.max(-pad, Math.min(total - size + pad, v));
+}
+function applyView(){
+  var top = fitW();
+  view.w = Math.max(MINZW, Math.min(top, view.w));
+  var h = view.w * curAR();
+  view.x = axis(view.x, view.w, VB.w);
+  view.y = axis(view.y, h, VB.h);
   svg.setAttribute("viewBox", view.x+" "+view.y+" "+view.w+" "+h);
   var f = $("btn-fit");
-  if(f) f.classList.toggle("hide", view.w >= VB.w - 1);
+  if(f) f.classList.toggle("hide", view.w >= top - 1);
 }
-function fitView(){ view = { x:0, y:0, w:VB.w }; applyView(); redrawForWidth(); }
+function fitView(){ view.w = fitW(); applyView(); redrawForWidth(); }
 /* Zoom about a fixed point, so whatever is under the fingers stays
    under the fingers. */
 function zoomAbout(cx, cy, factor){
   var before = view.w;
-  var want = Math.max(MINZW, Math.min(VB.w, view.w / factor));
+  var want = Math.max(MINZW, Math.min(fitW(), view.w / factor));
   var k = want / before;
   view.x = cx - (cx - view.x) * k;
   view.y = cy - (cy - view.y) * k;
@@ -831,7 +861,7 @@ function clientToPlan(clientX, clientY){
   var r = svg.getBoundingClientRect();
   if(!r.width || !r.height) return null;
   return { x: view.x + (clientX - r.left) / r.width * view.w,
-           y: view.y + (clientY - r.top) / r.height * (view.w * AR) };
+           y: view.y + (clientY - r.top) / r.height * (view.w * curAR()) };
 }
 
 var pointers = {}, pan = null, pinch = null;
@@ -839,6 +869,12 @@ function pointerList(){ return Object.keys(pointers); }
 function endGestures(){ pan = null; pinch = null; }
 
 function onPointerDown(evt){
+  /* A finger that leaves the window, or a touch the browser takes back,
+     can skip pointerup and leave a ghost in here forever — after which
+     every single-finger drag would be read as the second half of a
+     pinch. The primary pointer starts a fresh gesture, so anything
+     still tracked at that moment is stale. */
+  if(evt.isPrimary !== false){ pointers = {}; endGestures(); }
   pointers[evt.pointerId] = { x:evt.clientX, y:evt.clientY };
   var ids = pointerList();
 
@@ -868,15 +904,41 @@ function onPointerDown(evt){
   var sc = sceneAt(viewIdx), pl = sc && sc.place[selected];
   if(onGrip && wasSel && pl){
     var c = abs(pl);
-    drag = { id:selected, g:g, mode:"size", cx:c.x, cy:c.y, rot:!!(pl.r||0) };
+    drag = { id:selected, mode:"size", cx:c.x, cy:c.y, rot:!!(pl.r||0) };
   } else {
-    drag = { id:selected, g:g, mode:"move" };
+    var c2 = pl ? abs(pl) : null;
+    drag = { id:selected, mode:"move",
+             ox: c2 ? c2.x - p.x : 0, oy: c2 ? c2.y - p.y : 0 };
   }
   if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
   render();
+  drag.g = nodes[drag.id] || null;      // render() just rebuilt the layer
+  if(drag.g && drag.mode === "move") drag.g.setAttribute("class", "pc sel grab dragging");
   if(evt.preventDefault) evt.preventDefault();
 }
 
+function sendToZone(zid){
+  var sc = sceneAt(viewIdx); if(!sc || !selected) return;
+  var cur = sc.place[selected] || { r:0, note:"" };
+  sc.place[selected] = { zone:zid, x:0.5, y:0.5, r:cur.r||0, note:cur.note||"" };
+  markDirty(); render();
+}
+/* "Doesn't move this scene" copies the spot forward from the previous
+   scene, so diffing the two produces no move and the piece stays put in
+   the wing or on the aux stage. */
+function leaveAsWas(){
+  var sc = sceneAt(viewIdx), prev = sceneAt(viewIdx-1);
+  if(!sc || !selected) return;
+  var src = prev && prev.place[selected];
+  if(src){
+    sc.place[selected] = { zone:src.zone, x:src.x, y:src.y, r:src.r||0, note:src.note||"" };
+    toast("Stays where it was in “" + prev.name + "” — no move for the crew.");
+  } else {
+    sc.place[selected] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" };
+    toast("Nothing earlier to follow — parked in wing SR.");
+  }
+  markDirty(); render();
+}
 function clampSz(n){ return Math.round(Math.max(MINSZ, Math.min(MAXSZ, n))); }
 /* Size lives on the piece, not the placement — a sofa is one sofa in
    every scene — so a resize here changes it everywhere, on purpose. */
@@ -897,7 +959,7 @@ function onPointerMove(evt){
     var a = pointers[ids[0]], b = pointers[ids[1]];
     var d = Math.hypot(a.x-b.x, a.y-b.y);
     if(pinch.d > 0 && pinch.mid){
-      var want = Math.max(MINZW, Math.min(VB.w, pinch.w * (pinch.d / d)));
+      var want = Math.max(MINZW, Math.min(fitW(), pinch.w * (pinch.d / d)));
       var k = want / view.w;
       view.x = pinch.mid.x - (pinch.mid.x - view.x) * k;
       view.y = pinch.mid.y - (pinch.mid.y - view.y) * k;
@@ -922,7 +984,8 @@ function onPointerMove(evt){
   if(!drag) return;
   var p = svgPoint(evt); if(!p) return;
   if(drag.mode === "size"){ resizeTo(p); return; }
-  drag.g.setAttribute("transform","translate("+p.x+","+p.y+")");
+  if(!drag.g) return;
+  drag.g.setAttribute("transform","translate("+(p.x+drag.ox)+","+(p.y+drag.oy)+")");
 }
 
 function onPointerUp(evt){
@@ -936,6 +999,7 @@ function onPointerUp(evt){
     drag = null; markDirty(); render(); return;
   }
   var sc = sceneAt(viewIdx);
+  if(p){ p = { x:p.x + drag.ox, y:p.y + drag.oy }; }   // drop where the piece is, not the finger
   if(p && sc){
     var zid = hitZone(p);
     if(zid){
@@ -1092,7 +1156,7 @@ function applyMap(){
   document.body.classList.toggle("mapon", mapOn);
   var b = $("btn-map");
   if(b) b.textContent = mapOn ? "Hide stage map" : "Show stage map";
-  if(mapOn) redrawForWidth();               // it had no width to measure while hidden
+  if(mapOn){ fitView(); }                   // no measurable box until now
 }
 var reflowT = null;
 function redrawForWidth(){
@@ -1102,7 +1166,7 @@ function redrawForWidth(){
 }
 window.addEventListener("resize", function(){
   clearTimeout(reflowT);
-  reflowT = setTimeout(function(){ if(mapOn) redrawForWidth(); }, 120);
+  reflowT = setTimeout(function(){ if(mapOn){ applyView(); redrawForWidth(); } }, 120);
 });
 
 /* ---------- the More drawer ---------- */
@@ -1390,23 +1454,38 @@ function paintInspector(){
     inp.addEventListener("input", function(){ if(pl){ pl.note = inp.value; markDirty(); } });
     lab.appendChild(inp); r2.appendChild(lab); box.appendChild(r2);
 
+    /* Send it somewhere without dragging. On a phone this is the fast
+       path: the director says "put the bench on the aux stage" and it
+       is one tap, not a drag across a zoomed map. */
+    var rz = document.createElement("div"); rz.className = "row";
+    var zt = document.createElement("span"); zt.className = "tag"; zt.textContent = "Send it to";
+    rz.appendChild(zt);
+    var seg = document.createElement("div"); seg.className = "seg zones";
+    [["stage","Stage"],["wingSR","Wing SR"],["wingSL","Wing SL"],["aux","Aux stage"]].forEach(function(o){
+      var b = document.createElement("button"); b.textContent = o[1];
+      if(pl && pl.zone === o[0]) b.className = "on";
+      b.addEventListener("click", function(){ sendToZone(o[0]); });
+      seg.appendChild(b);
+    });
+    rz.appendChild(seg); box.appendChild(rz);
+
     var r3 = document.createElement("div"); r3.className = "row";
     if(pl){
       r3.appendChild(mkbtn(pl.r ? "Turn upright" : "Turn 90°", "btn", function(){ pl.r = pl.r?0:90; markDirty(); render(); }));
-      if(editing){
-        var sz = document.createElement("span"); sz.className = "tag";
-        sz.textContent = p.w + " × " + p.h + " — drag the orange corner; size applies to every scene";
-        r3.appendChild(sz);
-      }
-      r3.appendChild(mkbtn("Take out of this scene", "btn hot", function(){
-        delete sc.place[selected]; selected=null; markDirty(); render();
-      }));
+      /* Not "take it out of play" — a piece sitting in a wing is still
+         in the show, it just does not move for this scene. Inheriting
+         the previous scene's spot is what makes the diff produce no
+         move at all, which is the thing the crew actually wants. */
+      r3.appendChild(mkbtn("Doesn't move this scene", "btn", leaveAsWas));
     } else {
-      r3.appendChild(mkbtn("Put in this scene (wing SR)", "btn go-small", function(){
-        sc.place[selected] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" }; markDirty(); render();
-      }));
+      r3.appendChild(mkbtn("Put it back in the show", "btn go-small", leaveAsWas));
     }
     box.appendChild(r3);
+    if(editing && pl){
+      var sz = document.createElement("div"); sz.className = "help"; sz.style.marginTop = "6px";
+      sz.textContent = p.w + " × " + p.h + " — drag the orange corner to resize; the size applies to every scene.";
+      box.appendChild(sz);
+    }
   } else if(pl && pl.note){
     var n = document.createElement("div"); n.className = "help"; n.style.marginTop = "8px";
     n.textContent = pl.note; box.appendChild(n);

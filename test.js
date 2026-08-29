@@ -173,6 +173,36 @@ setTimeout(async () => {
     // wheel and pan paths are checked in a real browser instead.
   });
 
+  step("not moving a piece leaves it where it was, it does not vanish", () => {
+    const mv = d.querySelector("#moves .mv");
+    if (!mv) throw new Error("no moves in this scene to work with");
+    mv.click();
+    const name = (d.querySelector("#inspector b") || {}).textContent;
+    if (!name) throw new Error("nothing selected");
+    const stay = [...d.querySelectorAll("#inspector button")]
+      .find(b => /Doesn't move/.test(b.textContent));
+    if (!stay) throw new Error("no 'Doesn't move this scene' control");
+    stay.click();
+    const zone = (d.querySelector("#inspector .tag") || {}).textContent || "";
+    if (/out of play/i.test(zone)) throw new Error("it was taken out of play: " + zone);
+    if (!d.querySelector("#inspector .seg.zones button.on"))
+      throw new Error("it landed in no zone at all");
+    if (new RegExp(name).test(d.getElementById("moves").textContent))
+      throw new Error("crew are still told to move " + name);
+  });
+
+  step("one tap sends a piece to the aux stage", () => {
+    const aux = [...d.querySelectorAll("#inspector .seg.zones button")]
+      .find(b => /Aux/.test(b.textContent));
+    if (!aux) throw new Error("no aux-stage control");
+    aux.click();
+    const on = d.querySelector("#inspector .seg.zones button.on");
+    if (!on || !/Aux/.test(on.textContent))
+      throw new Error("aux is not the selected zone: " + (on && on.textContent));
+    if (!/aux/i.test((d.querySelector("#inspector .tag") || {}).textContent || ""))
+      throw new Error("the zone label did not follow");
+  });
+
   step("leaving edit mode puts the map back the way it was", () => {
     d.getElementById("btn-edit").click();                // Save / Done
     if (/Editing/.test(d.getElementById("plan-mode").textContent)) throw new Error("still editing");
