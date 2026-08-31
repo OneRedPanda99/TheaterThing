@@ -225,11 +225,11 @@ setTimeout(async () => {
     if ([...chips].some(c => c.classList.contains("out")))
       throw new Error("every piece is in this scene, none should read as absent");
   });
-  step("tapping a piece opens a popover over it, not a panel elsewhere", () => {
+  step("tapping a piece opens its inspector, docked clear of the plan", () => {
     goToScene(1);
     d.querySelector("#tray .pchip:not(.add)").click();
-    const pop = d.querySelector("#pophost .pop");
-    if (!pop) throw new Error("no popover");
+    const pop = d.querySelector("#inspector .insp");
+    if (!pop) throw new Error("no inspector");
     if (!byText("Wing SR", "button", pop)) throw new Error("no zone shortcut");
   });
   step("nothing on the plan resizes — the only handle turns", () => {
@@ -240,7 +240,7 @@ setTimeout(async () => {
       throw new Error("unselected pieces carry a handle too");
   });
   step("size is typed in feet, and reads back in feet and inches", () => {
-    const pop = d.querySelector("#pophost .pop");
+    const pop = d.querySelector("#inspector .insp");
     const wf = [...pop.querySelectorAll("input")].find(
       i => i.previousSibling && /Width/.test(i.previousSibling.textContent));
     if (!wf) throw new Error("no width field");
@@ -276,7 +276,7 @@ setTimeout(async () => {
     if (A(c, p44) !== 45) throw new Error("44 did not snap to 45, got " + A(c, p44));
   });
   step("the turn field takes a typed angle and Straighten clears it", () => {
-    const pop = d.querySelector("#pophost .pop");
+    const pop = d.querySelector("#inspector .insp");
     const t = [...pop.querySelectorAll("input")].find(
       i => i.previousSibling && /Turn/.test(i.previousSibling.textContent));
     if (!t) throw new Error("no turn field");
@@ -288,21 +288,23 @@ setTimeout(async () => {
       throw new Error("stored " + (sc.place[id] && sc.place[id].r));
     if (!/rotate\(30\)/.test(d.querySelector('.pc[data-id="' + id + '"]').getAttribute("transform")))
       throw new Error("the plan did not turn it");
-    need("Straighten", "button", d.querySelector("#pophost .pop")).click();
+    need("Straighten", "button", d.querySelector("#inspector .insp")).click();
     if (sc.place[id].r !== 0) throw new Error("Straighten left it at " + sc.place[id].r);
   });
   step("one tap sends a piece to the aux stage", () => {
-    const pop = d.querySelector("#pophost .pop");
+    const pop = d.querySelector("#inspector .insp");
     need("Aux", "button", pop).click();
     const state = JSON.parse(d.getElementById("state").textContent);
     const id = d.querySelector(".pc.sel").getAttribute("data-id");
     // read the drawn plan, not #state — that is the last published snapshot
     if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("piece vanished");
-    if (!/Aux stage/.test(d.querySelector("#pophost .pop .tag").textContent))
-      throw new Error("popover still says " + d.querySelector("#pophost .pop .tag").textContent);
+    if (!/Aux stage/.test(d.querySelector("#inspector .insp .tag").textContent))
+      throw new Error("popover still says " + d.querySelector("#inspector .insp .tag").textContent);
     if (state.scenes.length !== 5) throw new Error("state unexpectedly changed");
   });
   step("all three line sets are tracked, and each is called by name", () => {
+    const held = d.querySelector(".pc.sel");
+    w.GL.select(null);                       // the strip yields to the inspector
     const sc = w.GL.S.scenes[w.GL.viewIdx];
     if (w.GL.CURTAINS.length !== 3) throw new Error("expected main, mid and scrim");
     sc.mid = "closed";
@@ -314,6 +316,7 @@ setTimeout(async () => {
     if (!mid.classList.contains("on")) throw new Error("closed is not marked");
     mid.click();
     if (sc.mid !== "open") throw new Error("tapping did not reopen it");
+    if (held) w.GL.select(held.getAttribute("data-id"));   // put the selection back
   });
   step("a curtain the theatre never closes is never called", () => {
     const a = { curtain: "closed" }, b = { curtain: "open" };
@@ -330,16 +333,16 @@ setTimeout(async () => {
       throw new Error("a curtain uses .scrim, which is the modal backdrop class");
   });
   step("a piece that does not move stays put instead of vanishing", () => {
-    need("Same as last scene", "button", d.querySelector("#pophost .pop")).click();
+    need("Same as last scene", "button", d.querySelector("#inspector .insp")).click();
     if (!d.querySelector(".pc.sel")) throw new Error("piece left the scene");
   });
   step("striking a piece takes it off the plan and greys its tray chip", () => {
     const id = d.querySelector(".pc.sel").getAttribute("data-id");
-    need("Off for this scene", "button", d.querySelector("#pophost .pop")).click();
+    need("Off for this scene", "button", d.querySelector("#inspector .insp")).click();
     if (d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("still drawn");
     const chip = [...d.querySelectorAll("#tray .pchip")].find(c => c.classList.contains("out"));
     if (!chip) throw new Error("tray does not show it is out of this scene");
-    need("Bring into this scene", "button", d.querySelector("#pophost .pop")).click();
+    need("Bring into this scene", "button", d.querySelector("#inspector .insp")).click();
     if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("could not bring it back");
   });
   step("editing does not publish — it goes to Save & sync", () => {
@@ -371,7 +374,7 @@ setTimeout(async () => {
     m.querySelector("input").value = "Ladder";
     need("Add piece", "button", m).click();
     if (!w.GL.S.pieces.some(p => p.name === "Ladder")) throw new Error("not added");
-    if (!d.querySelector("#pophost .pop")) throw new Error("new piece is not selected and shown");
+    if (!d.querySelector("#inspector .insp")) throw new Error("new piece is not selected and shown");
   });
   step("leaving build puts the run screen back", () => {
     d.getElementById("btn-setup").click();

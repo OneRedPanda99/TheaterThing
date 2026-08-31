@@ -11,7 +11,7 @@ function setMode(m){
   if(m === "build" && !isSM()){ toast("Only the stage manager can build the show."); return; }
   mode = m;
   selected = null;
-  hidePop();
+  hideInspector();
   render();
   /* The pane under the plan changes size between the two screens, so
      the map has to be re-clamped to the box it now has. */
@@ -51,11 +51,13 @@ function paintSceneBar(){
 
 function addSceneAfter(){
   var base = sceneAt(viewIdx);
-  S.scenes.splice(viewIdx+1, 0, {
-    id: "s" + Date.now(), name: "New scene", note: "",
-    curtain: base ? base.curtain : "open",
-    place: base ? JSON.parse(JSON.stringify(base.place)) : {}
-  });
+  var copy = { id: "s" + Date.now(), name: "New scene", note: "",
+               place: base ? JSON.parse(JSON.stringify(base.place)) : {} };
+  /* Every line set, not just the main one. Copying one and defaulting
+     the rest to open meant a new scene silently called the mid curtain
+     and the scrim back out. */
+  CURTAINS.forEach(function(c){ copy[c.key] = curtainAt(base, c.key); });
+  S.scenes.splice(viewIdx+1, 0, copy);
   if(S.liveIndex > viewIdx) S.liveIndex++;
   viewIdx += 1; browsing = viewIdx !== S.liveIndex;
   markDirty(); render();
@@ -80,7 +82,10 @@ function moveScene(dir){
    delete. */
 function paintSceneStrip(){
   var strip = $("scenestrip");
-  if(mode !== "build"){ strip.innerHTML = ""; return; }
+  /* One at a time. A selected piece and the scene it sits in are two
+     different jobs, and stacking both under the plan leaves no plan. */
+  strip.classList.toggle("hide", mode === "build" && !!selected);
+  if(mode !== "build" || selected){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
   if(!sc) return;
@@ -195,17 +200,22 @@ function newPieceSheet(){
 }
 
 /* ---------------- the piece popover ---------------- */
-function hidePop(){ $("pophost").innerHTML = ""; }
+function hideInspector(){ $("inspector").innerHTML = ""; }
 
-function paintPop(){
-  var host = $("pophost");
+/* The piece inspector is docked under the plan, not floated over it.
+   Anchored to the piece it describes it read well on a laptop and was
+   useless on a phone: the form is taller than the strip of map it was
+   covering, so you were editing something you could no longer see. */
+function paintInspector(){
+  var host = $("inspector");
   host.innerHTML = "";
+  host.classList.toggle("hide", mode !== "build" || !selected);
   if(mode !== "build" || !selected) return;
   var sc = sceneAt(viewIdx), p = pieceById(selected);
   if(!p){ selected = null; return; }
   var pl = sc ? sc.place[selected] : null;
 
-  var pop = ele("div", "pop");
+  var pop = ele("div", "insp");
   var hd = ele("div", "hd");
   var sw = ele("div", "sw"); sw.style.background = p.color;
   hd.appendChild(sw);
@@ -276,10 +286,6 @@ function paintPop(){
   }
   pop.appendChild(rs);
 
-  if(pl){
-    pop.appendChild(ele("div", "help",
-      "Sizes are for the whole show. Drag the handle above the piece to turn it."));
-  }
 
   var r2 = ele("div", "row");
   if(pl){
@@ -300,24 +306,6 @@ function paintPop(){
   }
   pop.appendChild(r2);
   host.appendChild(pop);
-  placePop(pop);
-}
-
-/* Sit the popover beside the piece, inside the stage, without ever
-   covering the piece it describes. */
-function placePop(pop){
-  var host = $("pophost");
-  if(!host.getBoundingClientRect || !nodes[selected]) return;
-  var H = host.getBoundingClientRect();
-  if(!H.width || !H.height) return;
-  var g = nodes[selected].getBoundingClientRect();
-  var pw = pop.offsetWidth || 300, ph = pop.offsetHeight || 220;
-  var pad = 10;
-  var x = g.left - H.left + g.width/2 - pw/2;
-  var y = g.bottom - H.top + pad;
-  if(y + ph > H.height - pad) y = g.top - H.top - ph - pad;   // flip above
-  pop.style.left = Math.max(pad, Math.min(H.width - pw - pad, x)) + "px";
-  pop.style.top  = Math.max(pad, Math.min(H.height - ph - pad, y)) + "px";
 }
 
 function sendToZone(zid){
@@ -450,7 +438,11 @@ function setupSheet(){
         var ft = parseFeet(iw.value);
         if(ft !== null) S.stageFeet = Math.max(10, Math.min(200, ft));
         iw.value = fmtFeet(stageFeet());
-        sayScale(); markDirty(); render();
+        sayScale(); markDirty();
+        /* The mid curtain and the scrim hang a measured number of feet
+           from the back wall, so a new scale moves their rods. The plan
+           is drawn once at startup; redraw it. */
+        buildPlan(); refit(); render();
       });
       lw.appendChild(iw); rw.appendChild(lw);
       s2.appendChild(rw); s2.appendChild(wh);

@@ -147,9 +147,6 @@ body.mode-build .scenebar{display:flex}
 .planwrap{position:absolute;top:0;left:0;right:0;bottom:var(--pane);overflow:hidden}
 .plansvg{position:absolute;inset:0}
 svg.plan{width:100%;height:100%;display:block;touch-action:none}
-/* The popover layer floats over the stage without taking a grid cell. */
-.pophost{position:absolute;inset:0;pointer-events:none;z-index:20}
-.pophost > *{pointer-events:auto}
 /* Controls that live on the map itself. Bottom right, because the
    theatre is widest across the top and the zone names sit low on the
    left — this is the one corner nothing else wants. */
@@ -288,25 +285,35 @@ body.mode-build .pc{cursor:grab}
 .pchip.sel{border-color:var(--work);box-shadow:inset 0 0 0 1px var(--work)}
 .pchip.add{color:var(--dim)}
 
-/* ---------------- piece popover (build mode) ---------------- */
-.pop{position:absolute;z-index:20;width:min(300px,calc(100% - 20px));
-  background:var(--surface);border:1px solid var(--rule2);border-radius:var(--r);
-  padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.pop .hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
-.pop .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
-.pop .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* Compact inside the popover: it floats over the map it is editing, so
-   every row it does not need is map you can still see. Input font-size
-   stays at 16px — anything smaller makes iOS zoom the page on focus. */
-.pop{max-height:calc(100% - 20px);overflow:auto;padding:11px}
-.pop .row{gap:6px}
-.pop .row + .row{margin-top:7px}
-.pop input{padding:7px 9px}
-.pop .help{margin-top:7px;font-size:11.5px}
-.pop .seg button{min-height:40px;padding:8px 6px;font-size:12.5px}
-.pop .btn.sm{min-height:36px}
+/* ---------------- piece inspector (build mode) ----------------
+   Docked under the plan rather than floated over it. Anchored to the
+   piece it describes, the form was taller than the strip of map it
+   covered, so on a phone you were editing something you could not see.
+
+   Capped and scrollable, so selecting a piece can never squeeze the
+   plan down to nothing. Input font-size stays at 16px — anything
+   smaller makes iOS zoom the page on focus. */
+.inspector{max-height:36vh;overflow:auto;-webkit-overflow-scrolling:touch;
+  border-bottom:1px solid var(--rule)}
+.insp{padding:9px 10px 10px}
+.insp .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.insp .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
+.insp .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.insp .row{gap:6px}
+.insp .row + .row{margin-top:5px}
+.insp input{padding:7px 9px}
+.insp .help{margin-top:7px;font-size:11.5px}
+.insp .seg button{min-height:40px;padding:8px 6px;font-size:12.5px}
+.insp .btn.sm{min-height:36px}
 label.f.size{flex:1 1 64px}
 label.f.size > span{white-space:nowrap}
+/* Docked full width, the fields would stretch across a whole iPad —
+   a note input a metre long is harder to read, not easier. */
+@media(min-width:640px){
+  .insp{max-width:860px}
+  .insp label.f{max-width:300px}
+  .insp .seg{max-width:520px}
+}
 
 /* ---------------- deck ---------------- */
 /* Fitts's law: the primary target sits ON the bottom edge, is the
@@ -472,9 +479,9 @@ label.f.size > span{white-space:nowrap}
 
     <div class="buildpane hide" id="buildpane">
       <div class="scenestrip" id="scenestrip"></div>
+      <div class="inspector" id="inspector"></div>
       <div class="tray" id="tray"></div>
     </div>
-    <div class="pophost" id="pophost"></div>
   </div>
 
   <div class="deck" id="deck"></div>
@@ -617,13 +624,21 @@ var CROSS_Y = 50, CURTAIN_Y = 542;
    The main one is stored as `curtain` because that is what shows built
    before the other two called it, and renaming it would strand them. */
 var CURTAINS = [
-  { key:"curtain", name:"Main curtain", short:"MAIN",  y:542, cls:"main",  color:"var(--gel-rose)" },
-  { key:"mid",     name:"Mid curtain",  short:"MID",   y:330, cls:"mid",   color:"var(--gel-congo)" },
+  { key:"curtain", name:"Main curtain", short:"MAIN",  cls:"main",  color:"var(--gel-rose)" },
+  { key:"mid",     name:"Mid curtain",  short:"MID",   cls:"mid",   color:"var(--gel-congo)", ft:16 },
   /* cls is "sheer", not "scrim": .scrim is the modal backdrop, and a
      curtain sharing it means querySelector(".scrim") finds a rect on
      the plan — which the Escape handler then deletes. */
-  { key:"scrim",   name:"Scrim",        short:"SCRIM", y:170, cls:"sheer", color:"var(--gel-green)" }
+  { key:"scrim",   name:"Scrim",        short:"SCRIM", cls:"sheer", color:"var(--gel-green)", ft:8 }
 ];
+/* Where a line set hangs, in plan units. The main curtain is at the
+   proscenium by definition. The other two are measured downstage from
+   the back wall in feet, so they stay where they really hang if the
+   stage is rescaled — the drawing keeps its shape, so a foot of depth
+   scales with a foot of width. */
+function curtainY(c){
+  return c.ft === undefined ? CURTAIN_Y : ZONES.stage.y + toUnits(c.ft);
+}
 /* Anything not explicitly closed is open — a theatre with no mid
    curtain simply never closes one, and nothing is ever called for it. */
 function curtainAt(sc, key){ return (sc && sc[key] === "closed") ? "closed" : "open"; }
@@ -875,14 +890,15 @@ function buildPlan(){
      left end so the crew can tell which one is being called. */
   curtains = {};
   CURTAINS.forEach(function(c){
-    el("line", { x1:st.x-8, y1:c.y, x2:st.x+st.w+8, y2:c.y, class:"curtain-rod" }, svg);
+    var y = curtainY(c);
+    el("line", { x1:st.x-8, y1:y, x2:st.x+st.w+8, y2:y, class:"curtain-rod" }, svg);
     curtains[c.key] = {
-      L: el("rect", { x:st.x, y:c.y-5, width:st.w/2, height:10,
+      L: el("rect", { x:st.x, y:y-5, width:st.w/2, height:10,
                       class:"curtain " + c.cls }, svg),
-      R: el("rect", { x:st.x+st.w/2, y:c.y-5, width:st.w/2, height:10,
+      R: el("rect", { x:st.x+st.w/2, y:y-5, width:st.w/2, height:10,
                       class:"curtain " + c.cls }, svg)
     };
-    label(el("text", { x:st.x+st.w-8, y:c.y-7, "text-anchor":"end", class:"grid-tag" }, svg), 9)
+    label(el("text", { x:st.x+st.w-8, y:y-7, "text-anchor":"end", class:"grid-tag" }, svg), 9)
       .textContent = c.short;
   });
 
@@ -1237,7 +1253,7 @@ function onPointerDown(evt){
   if(!wasSelected) render();                  // first tap selects and draws the handle
   drag.g = nodes[drag.id] || null;
   if(drag.g) drag.g.classList.add("dragging");
-  hidePop();
+  hideInspector();
   if(evt.preventDefault) evt.preventDefault();
 }
 
@@ -1670,7 +1686,7 @@ function setMode(m){
   if(m === "build" && !isSM()){ toast("Only the stage manager can build the show."); return; }
   mode = m;
   selected = null;
-  hidePop();
+  hideInspector();
   render();
   /* The pane under the plan changes size between the two screens, so
      the map has to be re-clamped to the box it now has. */
@@ -1710,11 +1726,13 @@ function paintSceneBar(){
 
 function addSceneAfter(){
   var base = sceneAt(viewIdx);
-  S.scenes.splice(viewIdx+1, 0, {
-    id: "s" + Date.now(), name: "New scene", note: "",
-    curtain: base ? base.curtain : "open",
-    place: base ? JSON.parse(JSON.stringify(base.place)) : {}
-  });
+  var copy = { id: "s" + Date.now(), name: "New scene", note: "",
+               place: base ? JSON.parse(JSON.stringify(base.place)) : {} };
+  /* Every line set, not just the main one. Copying one and defaulting
+     the rest to open meant a new scene silently called the mid curtain
+     and the scrim back out. */
+  CURTAINS.forEach(function(c){ copy[c.key] = curtainAt(base, c.key); });
+  S.scenes.splice(viewIdx+1, 0, copy);
   if(S.liveIndex > viewIdx) S.liveIndex++;
   viewIdx += 1; browsing = viewIdx !== S.liveIndex;
   markDirty(); render();
@@ -1739,7 +1757,10 @@ function moveScene(dir){
    delete. */
 function paintSceneStrip(){
   var strip = $("scenestrip");
-  if(mode !== "build"){ strip.innerHTML = ""; return; }
+  /* One at a time. A selected piece and the scene it sits in are two
+     different jobs, and stacking both under the plan leaves no plan. */
+  strip.classList.toggle("hide", mode === "build" && !!selected);
+  if(mode !== "build" || selected){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
   if(!sc) return;
@@ -1854,17 +1875,22 @@ function newPieceSheet(){
 }
 
 /* ---------------- the piece popover ---------------- */
-function hidePop(){ $("pophost").innerHTML = ""; }
+function hideInspector(){ $("inspector").innerHTML = ""; }
 
-function paintPop(){
-  var host = $("pophost");
+/* The piece inspector is docked under the plan, not floated over it.
+   Anchored to the piece it describes it read well on a laptop and was
+   useless on a phone: the form is taller than the strip of map it was
+   covering, so you were editing something you could no longer see. */
+function paintInspector(){
+  var host = $("inspector");
   host.innerHTML = "";
+  host.classList.toggle("hide", mode !== "build" || !selected);
   if(mode !== "build" || !selected) return;
   var sc = sceneAt(viewIdx), p = pieceById(selected);
   if(!p){ selected = null; return; }
   var pl = sc ? sc.place[selected] : null;
 
-  var pop = ele("div", "pop");
+  var pop = ele("div", "insp");
   var hd = ele("div", "hd");
   var sw = ele("div", "sw"); sw.style.background = p.color;
   hd.appendChild(sw);
@@ -1935,10 +1961,6 @@ function paintPop(){
   }
   pop.appendChild(rs);
 
-  if(pl){
-    pop.appendChild(ele("div", "help",
-      "Sizes are for the whole show. Drag the handle above the piece to turn it."));
-  }
 
   var r2 = ele("div", "row");
   if(pl){
@@ -1959,24 +1981,6 @@ function paintPop(){
   }
   pop.appendChild(r2);
   host.appendChild(pop);
-  placePop(pop);
-}
-
-/* Sit the popover beside the piece, inside the stage, without ever
-   covering the piece it describes. */
-function placePop(pop){
-  var host = $("pophost");
-  if(!host.getBoundingClientRect || !nodes[selected]) return;
-  var H = host.getBoundingClientRect();
-  if(!H.width || !H.height) return;
-  var g = nodes[selected].getBoundingClientRect();
-  var pw = pop.offsetWidth || 300, ph = pop.offsetHeight || 220;
-  var pad = 10;
-  var x = g.left - H.left + g.width/2 - pw/2;
-  var y = g.bottom - H.top + pad;
-  if(y + ph > H.height - pad) y = g.top - H.top - ph - pad;   // flip above
-  pop.style.left = Math.max(pad, Math.min(H.width - pw - pad, x)) + "px";
-  pop.style.top  = Math.max(pad, Math.min(H.height - ph - pad, y)) + "px";
 }
 
 function sendToZone(zid){
@@ -2109,7 +2113,11 @@ function setupSheet(){
         var ft = parseFeet(iw.value);
         if(ft !== null) S.stageFeet = Math.max(10, Math.min(200, ft));
         iw.value = fmtFeet(stageFeet());
-        sayScale(); markDirty(); render();
+        sayScale(); markDirty();
+        /* The mid curtain and the scrim hang a measured number of feet
+           from the back wall, so a new scale moves their rods. The plan
+           is drawn once at startup; redraw it. */
+        buildPlan(); refit(); render();
       });
       lw.appendChild(iw); rw.appendChild(lw);
       s2.appendChild(rw); s2.appendChild(wh);
@@ -2406,12 +2414,12 @@ function render(){
   paintMoves(moves);
   paintNote();
   paintSceneStrip();
+  paintInspector();
   paintTray();
   paintDeck();
   drawPieces(sc);
   drawRoutes(moves);
   setCurtains(sc, false);
-  paintPop();
   applyPanes();
 }
 
@@ -2504,6 +2512,7 @@ window.GL = {
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,
+  select: function(id){ selected = id; render(); },
   setApi: function(a){ api = a; apiState = a ? "live" : "local"; syncChip(); }
 };
 })();

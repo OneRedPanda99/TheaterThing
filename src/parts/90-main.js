@@ -12,12 +12,12 @@ function render(){
   paintMoves(moves);
   paintNote();
   paintSceneStrip();
+  paintInspector();
   paintTray();
   paintDeck();
   drawPieces(sc);
   drawRoutes(moves);
   setCurtains(sc, false);
-  paintPop();
   applyPanes();
 }
 
@@ -110,5 +110,6 @@ window.GL = {
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,
+  select: function(id){ selected = id; render(); },
   setApi: function(a){ api = a; apiState = a ? "live" : "local"; syncChip(); }
 };
