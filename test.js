@@ -232,6 +232,23 @@ setTimeout(async () => {
     if (!pop) throw new Error("no inspector");
     if (!byText("Wing SR", "button", pop)) throw new Error("no zone shortcut");
   });
+  step("the crew note is behind a tap, not taking a row of the map", () => {
+    const insp = d.querySelector("#inspector .insp");
+    if (insp.querySelector(".notebox")) throw new Error("note field is open by default");
+    const nb = need("Note", "button", insp);
+    nb.click();
+    const box = d.querySelector("#inspector .notebox input");
+    if (!box) throw new Error("tapping Note did not open the field");
+    box.value = "upstage of leg 2";
+    box.dispatchEvent(new w.Event("input"));
+    const id = d.querySelector(".pc.sel").getAttribute("data-id");
+    if (w.GL.S.scenes[w.GL.viewIdx].place[id].note !== "upstage of leg 2")
+      throw new Error("note not saved");
+    need("Done", "button", d.querySelector("#inspector .notebox")).click();
+    if (d.querySelector("#inspector .notebox")) throw new Error("Done did not close it");
+    if (!/Note/.test(need("Note", "button", d.querySelector("#inspector .insp")).textContent))
+      throw new Error("no way back into the note");
+  });
   step("nothing on the plan resizes — the only handle turns", () => {
     if (d.querySelector(".pc.sel .grip, .pc.sel .grip-hit"))
       throw new Error("a resize grip is still on the plan");

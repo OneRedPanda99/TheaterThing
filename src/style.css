@@ -241,8 +241,8 @@ body.mode-build .pc{cursor:grab}
 .mv .path .ar{opacity:.5}
 .mv .hint{font-size:12.5px;color:var(--ink);opacity:.75;margin-top:4px}
 .empty{color:var(--dim);font-size:13.5px;padding:18px 14px;line-height:1.5}
-.notebox{padding:14px;border-top:1px solid var(--rule);font-size:13.5px}
-.notebox b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;
+.sheetbody .notebox{padding:14px;border-top:1px solid var(--rule);font-size:13.5px}
+.sheetbody .notebox b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;
   color:var(--dim);margin-bottom:5px;font-weight:700}
 
 /* ---------------- the build pane ----------------

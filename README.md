@@ -105,8 +105,10 @@ top, the plan fills the middle, and the set pieces run along the bottom.
   what a stage manager changes on nearly every pass. Reorder and delete — rarer, and
   riskier — stay one tap further in.
 - Tap a piece and its inspector **docks under the plan**, carrying its zone shortcuts,
-  its crew note, its size, its angle, and what to do with it this scene. It replaces the
-  scene strip while it is open, so only one of them is ever competing with the map.
+  its size, its angle, and what to do with it this scene. The crew note is one tap
+  further in, lit when there is something written, because it gets set once per piece
+  and read in the move list rather than here. It replaces the scene strip while it is
+  open, so only one of them is ever competing with the map.
   Anchoring it to the piece read well on a laptop and was useless on a phone: the form
   is taller than the strip of map it covered, so you were editing something you could
   no longer see.
@@ -190,7 +192,7 @@ npm ci
 npm test
 ```
 
-56 checks covering route derivation, move-list generation, the command deck's positional
+57 checks covering route derivation, move-list generation, the command deck's positional
 guarantees, build mode, feet parsing, free rotation and its snap, the three curtains,
 backstage modes, failed-call handling, the print sheet, and the self-rebuild round trip.
 
