@@ -74,26 +74,28 @@ function moveScene(dir){
 }
 
 /* ---------------- the scene you are editing ----------------
-   Name, curtain and note, in reach without opening anything. These
+   Name, curtains and note, in reach without opening anything. These
    are what a stage manager changes on nearly every pass, and burying
    them behind a modal was most of what made building feel like work.
    The chip's own sheet keeps the rarer, riskier ones — reorder and
-   delete. */
-/* Folded away, it is a single chevron and the map takes the room back.
-   Nothing is lost while it is shut: the scene chips above still name
-   the scene you are on. Remembered per device, because someone who
+   delete.
+
+   Folded away, the whole bottom pane goes — scene row and piece tray
+   both — and the map takes the room back. Nothing is lost while it is
+   shut: the scene chips above still name the scene you are on, and one
+   tap brings it all back. Remembered per device, because someone who
    wants it out of the way wants it out of the way tomorrow too. */
-var stripOpen = LS.get("strip", true);
+var paneOpen = LS.get("strip", true);
 
 function paintSceneStrip(){
   var strip = $("scenestrip");
   if(mode !== "build"){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
-  strip.classList.toggle("shut", !stripOpen);
+  strip.classList.toggle("shut", !paneOpen);
   if(!sc) return;
 
-  if(stripOpen){
+  if(paneOpen){
     var nm = document.createElement("input");
     nm.type = "text"; nm.value = sc.name; nm.placeholder = "Name this scene";
     nm.setAttribute("aria-label", "Scene name");
@@ -115,14 +117,15 @@ function paintSceneStrip(){
     strip.appendChild(mkbtn("More…", "btn sm", sceneSheet));
   }
 
-  var fold = mkbtn(stripOpen ? "▴" : "▾", "btn sm fold", function(){
-    stripOpen = !stripOpen;
-    LS.set("strip", stripOpen);
+  var fold = mkbtn(paneOpen ? "▴" : "▾", "btn sm fold", function(){
+    paneOpen = !paneOpen;
+    LS.set("strip", paneOpen);
+    if(!paneOpen) selected = null;      // no tray to get back out of
     render();
   });
-  fold.title = stripOpen ? "Hide the scene row" : "Show the scene row";
+  fold.title = paneOpen ? "Hide the scene row and the pieces" : "Show the scene row and the pieces";
   fold.setAttribute("aria-label", fold.title);
-  fold.setAttribute("aria-expanded", stripOpen ? "true" : "false");
+  fold.setAttribute("aria-expanded", paneOpen ? "true" : "false");
   strip.appendChild(fold);
 }
 
@@ -151,7 +154,8 @@ function curtainSeg(sc){
 /* ---------------- set pieces along the bottom ---------------- */
 function paintTray(){
   var tray = $("tray");
-  if(mode !== "build"){ tray.innerHTML = ""; return; }
+  tray.classList.toggle("hide", mode !== "build" || !paneOpen);
+  if(mode !== "build" || !paneOpen){ tray.innerHTML = ""; return; }
   tray.innerHTML = "";
   var sc = sceneAt(viewIdx);
   S.pieces.forEach(function(p){
