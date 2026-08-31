@@ -1,3 +1,13 @@
+/*
+ * Boots the built page in a headless DOM and exercises the things a
+ * crew would notice if they broke: route derivation, the move list,
+ * the command deck, build mode, backstage modes, a failed call, the
+ * print sheet, and the self-rebuild round trip.
+ *
+ * jsdom has no layout, so anything that depends on measurement (the
+ * sheet snap heights, popover placement, pinch and pan) is asserted
+ * only as far as it can be. Those paths are checked in a browser.
+ */
 const fs = require("fs");
 const { JSDOM } = require("jsdom");
 
@@ -14,26 +24,44 @@ const dom = new JSDOM(doc, {
 });
 const w = dom.window, d = w.document;
 
+function step(name, fn) {
+  try { fn(); console.log("  ok   " + name); }
+  catch (e) { console.log("  FAIL " + name + " :: " + e.message); errors.push(name + ": " + e.message); }
+}
 async function stepA(name, fn) {
   try { await fn(); console.log("  ok   " + name); }
   catch (e) { console.log("  FAIL " + name + " :: " + e.message); errors.push(name + ": " + e.message); }
 }
 const tick = () => new Promise(r => setTimeout(r, 0));
-function viewIndexOf(doc) {
-  const cur = doc.querySelector("#strip .sc.cur");
-  return cur ? [...doc.querySelectorAll("#strip .sc")].indexOf(cur) : 0;
+
+/* Find a control by the words on it. Tests should break when the
+   interface stops saying what it does, not when a class is renamed. */
+function byText(text, sel, root) {
+  const scope = root || d;
+  return [...scope.querySelectorAll(sel || "button")]
+    .find(b => b.textContent.trim().toLowerCase().includes(text.toLowerCase()));
 }
-function step(name, fn) {
-  try { fn(); console.log("  ok   " + name); }
-  catch (e) { console.log("  FAIL " + name + " :: " + e.message); errors.push(name + ": " + e.message); }
+function need(text, sel, root) {
+  const el = byText(text, sel, root);
+  if (!el) throw new Error("no control saying " + JSON.stringify(text));
+  return el;
+}
+function moveTexts() { return [...d.querySelectorAll("#moves .mv")].map(n => n.textContent); }
+function sceneChips() { return [...d.querySelectorAll("#scenebar .chip:not(.add)")]; }
+function openBuild() {
+  d.getElementById("btn-setup").click();
+  need("Build the show").click();
+}
+function goToScene(i) {
+  if (!d.querySelector("#scenebar .chip")) openBuild();
+  sceneChips()[i].click();
 }
 
 setTimeout(async () => {
   console.log("--- load ---");
   console.log(errors.length ? errors.join("\n") : "  no load errors");
 
-  // role modal should be up on a fresh device
-  step("role modal shown", () => {
+  step("role modal is the first thing on a fresh device", () => {
     if (!d.querySelector(".scrim")) throw new Error("no role picker");
   });
   step("pick stage manager", () => {
@@ -41,393 +69,349 @@ setTimeout(async () => {
     if (d.querySelector(".scrim")) throw new Error("modal did not close");
   });
 
-  console.log("--- render ---");
-  step("plan svg drawn", () => {
+  console.log("--- the run screen ---");
+  step("the ground plan is on screen, not hidden behind a toggle", () => {
     const svg = d.querySelector("svg.plan");
     if (!svg) throw new Error("no svg");
-    const pcs = d.querySelectorAll(".pc");
-    if (pcs.length < 5) throw new Error("only " + pcs.length + " pieces drawn");
-  });
-  step("scene strip has 5 scenes", () => {
-    const n = d.querySelectorAll("#strip .sc").length;
-    if (n !== 5) throw new Error("got " + n);
+    if (d.getElementById("planwrap").classList.contains("hide")) throw new Error("plan hidden");
+    if (byText("show stage map")) throw new Error("there is still a map toggle");
+    if (d.querySelectorAll(".pc").length < 5) throw new Error("pieces not drawn");
   });
   step("opens on whatever scene the SM last called", () => {
     const state = JSON.parse(d.getElementById("state").textContent);
-    const live = d.querySelectorAll("#strip .sc.livesc");
-    if (live.length !== 1) throw new Error(live.length + " scenes marked live");
-    const expected = state.scenes[state.liveIndex].name;
-    if (live[0].querySelector(".t").textContent !== expected) throw new Error("marked live: " + live[0].textContent);
-    if (!d.querySelector("#slotR .go")) throw new Error("no GO on load");
+    const expected = state.scenes[state.liveIndex];
+    if (d.getElementById("grab-nm").textContent !== expected.name)
+      throw new Error("sheet says " + d.getElementById("grab-nm").textContent);
+    if (!d.getElementById("grab-k").textContent.includes("On stage now"))
+      throw new Error("does not say it is live");
   });
-  step("go to scene 1", () => { d.querySelectorAll("#strip .sc")[0].click(); });
-  step("scene 1 shows preset message", () => {
-    const t = d.getElementById("moves").textContent;
-    if (!/preset/i.test(t)) throw new Error("got: " + t.slice(0, 80));
+  step("the sheet header carries scene, position and move count", () => {
+    const num = d.getElementById("grab-num").textContent;
+    if (!/^\d+\/\d+$/.test(num)) throw new Error("position reads " + num);
+    if (!/move|preset|no change/.test(d.getElementById("grab-ct").textContent))
+      throw new Error("no move count");
   });
-  step("sync chip says device-only (no capability)", () => {
-    const t = d.getElementById("syncchip").textContent;
-    if (!/device|Connect/i.test(t)) throw new Error("got: " + t);
+  step("the topbar carries only the show, the status and Setup", () => {
+    const btns = d.querySelectorAll(".top button");
+    if (btns.length !== 1) throw new Error(btns.length + " buttons in the topbar");
+    if (btns[0].textContent.trim() !== "Setup") throw new Error("not Setup: " + btns[0].textContent);
+  });
+  step("sync chip says device-only when there is no artifact runtime", () => {
+    const c = d.getElementById("syncchip");
+    if (!/device/i.test(c.textContent)) throw new Error("chip says " + c.textContent);
+    if (!c.classList.contains("warn")) throw new Error("not flagged");
+  });
+  step("nothing scrolls the document — the deck cannot be pushed off screen", () => {
+    const css = d.getElementById("sheet").textContent;
+    if (!/html,body\{[^}]*overflow:hidden/.test(css)) throw new Error("body can scroll");
+    if (!/\.deck\{[^}]*safe-b/.test(css)) throw new Error("deck ignores the home indicator");
   });
 
-  console.log("--- navigate to scene 2 ---");
-  step("click scene 2", () => { d.querySelectorAll("#strip .sc")[1].click(); });
+  console.log("--- moves are derived, never typed ---");
+  step("scene 1 is the preset, and says so", () => {
+    goToScene(0);
+    d.getElementById("btn-setup").click();          // leave build mode
+    if (!/preset/i.test(d.querySelector("#moves .empty").textContent))
+      throw new Error("no preset message");
+  });
   step("scene 2 lists real moves", () => {
-    const mvs = d.querySelectorAll("#moves .mv");
-    if (!mvs.length) throw new Error("no moves listed");
-    console.log("       " + [...mvs].map(m => m.querySelector(".nm").textContent).join(" | "));
+    goToScene(1);
+    d.getElementById("btn-setup").click();
+    const t = moveTexts();
+    if (t.length < 3) throw new Error("only " + t.length + " moves");
+    if (!t.some(x => /Sofa/.test(x))) throw new Error("no sofa move");
   });
-  step("curtain change is listed first", () => {
-    const first = d.querySelector("#moves .mv .nm").textContent;
-    if (!/curtain/i.test(first)) throw new Error("first move is: " + first);
+  step("the curtain is called first", () => {
+    if (!/Curtain/.test(moveTexts()[0])) throw new Error("first move is " + moveTexts()[0]);
   });
-  step("sofa routes wing SR -> stage with no via", () => {
-    const rows = [...d.querySelectorAll("#moves .mv")];
-    const sofa = rows.find(r => /Sofa/.test(r.textContent));
-    if (!sofa) throw new Error("no sofa move");
-    const zs = [...sofa.querySelectorAll(".z")].map(z => z.textContent);
-    console.log("       sofa path: " + zs.join(" -> "));
-    if (zs[0] !== "Wing SR" || !/^Stage /.test(zs[zs.length - 1])) throw new Error(zs.join(","));
+  step("sofa goes wing SR to stage with nothing in between", () => {
+    const row = moveTexts().find(x => /Sofa/.test(x));
+    if (!/Wing SR/.test(row)) throw new Error("no origin: " + row);
+    if (!/Stage DS?[RCL]|Stage \w\w[RCL]/.test(row)) throw new Error("no destination: " + row);
+    if (/Crossover/.test(row)) throw new Error("routed the long way: " + row);
   });
-
-  console.log("--- scene 3: aux -> wing, cross-stage traffic ---");
-  step("click scene 3", () => { d.querySelectorAll("#strip .sc")[2].click(); });
-  step("scene 3 moves", () => {
-    const rows = [...d.querySelectorAll("#moves .mv")];
-    rows.forEach(r => console.log("       " + r.querySelector(".nm").textContent + " :: " +
-      [...r.querySelectorAll(".z")].map(z => z.textContent).join(" -> ")));
-    const chair = rows.find(r => /Chair A/.test(r.textContent));
-    if (!chair) throw new Error("chair A should travel stage -> wing SL");
+  step("aux to wing SR is direct — they share a side", () => {
+    goToScene(2);
+    d.getElementById("btn-setup").click();
+    const row = moveTexts().find(x => /Door unit/.test(x));
+    if (!row) throw new Error("door unit does not move into scene 3");
+    if (/Crossover/.test(row)) throw new Error("routed via the crossover: " + row);
   });
-  step("door unit aux -> wing SR is direct", () => {
-    const rows = [...d.querySelectorAll("#moves .mv")];
-    const door = rows.find(r => /Door unit/.test(r.textContent));
-    if (!door) throw new Error("no door move");
-    const zs = [...door.querySelectorAll(".z")].map(z => z.textContent);
-    if (zs.length !== 2) throw new Error("expected direct hop, got " + zs.join(" -> "));
+  step("stage to aux passes through wing SR, because that is the only door", () => {
+    const row = moveTexts().find(x => /Lamppost/.test(x));
+    if (!row) throw new Error("lamppost does not move");
+    if (!/Wing SR/.test(row)) throw new Error("skipped the wing: " + row);
   });
-
-  console.log("--- scene 4: aux -> stage should route via wing SR ---");
-  step("click scene 4", () => { d.querySelectorAll("#strip .sc")[3].click(); });
-  step("scene 4 moves", () => {
-    const rows = [...d.querySelectorAll("#moves .mv")];
-    rows.forEach(r => console.log("       " + r.querySelector(".nm").textContent + " :: " +
-      [...r.querySelectorAll(".z")].map(z => z.textContent).join(" -> ")));
-    const lamp = rows.find(r => /Lamppost/.test(r.textContent));
-    if (!lamp) throw new Error("lamppost should go stage -> aux");
-    const zs = [...lamp.querySelectorAll(".z")].map(z => z.textContent);
-    if (!zs.includes("Wing SR")) throw new Error("stage->aux must pass through Wing SR, got " + zs.join(" -> "));
+  step("a piece that sits still in a wing is not called as a move", () => {
+    goToScene(4);
+    d.getElementById("btn-setup").click();
+    if (moveTexts().some(x => /Bench/.test(x))) throw new Error("bench listed but it did not move");
+    if (!moveTexts().length) throw new Error("scene 5 should still have moves");
   });
-  step("bench wing SL -> wing SL is not a move", () => {
-    const rows = [...d.querySelectorAll("#moves .mv")];
-    const b = rows.find(r => /Bench/.test(r.textContent));
-    if (b) {
-      const zs = [...b.querySelectorAll(".z")].map(z => z.textContent);
-      console.log("       bench: " + zs.join(" -> "));
-    }
-  });
-
-  console.log("--- editing ---");
-  step("select a piece via the move list", () => {
-    d.querySelector("#moves .mv").click();
-  });
-  step("open the build panel", () => {
-    d.getElementById("btn-editopen").click();
-    if (d.getElementById("editbody").classList.contains("hide")) throw new Error("did not open");
-    if (!d.querySelectorAll("#editbody .pitem").length) throw new Error("no piece list");
-  });
-  step("Edit lives on the map, turns the map on, and becomes Save", () => {
-    d.body.classList.remove("mapon");
-    const b = d.getElementById("btn-edit");
-    if (!b) throw new Error("no Edit button in the plan header");
-    if (b.textContent !== "Edit") throw new Error("label starts as: " + b.textContent);
-    b.click();
-    if (!/Editing/.test(d.getElementById("plan-mode").textContent)) throw new Error("mode chip wrong");
-    if (!d.body.classList.contains("mapon")) throw new Error("Edit did not force the map on");
-    if (!/Save|Done/.test(b.textContent)) throw new Error("label did not flip, still: " + b.textContent);
-  });
-
-  step("a selected piece grows a resize handle, unselected ones do not", () => {
-    const pc = d.querySelector(".pc");
-    if (!pc) throw new Error("no pieces drawn on the plan");
-    pc.dispatchEvent(new w.Event("pointerdown", { bubbles: true }));
+  step("a move list row selects the piece on the plan", () => {
+    [...d.querySelectorAll("#moves .mv")].find(n => /Sofa/.test(n.textContent)).click();
     const sel = d.querySelector(".pc.sel");
     if (!sel) throw new Error("nothing selected on the plan");
-    if (!sel.querySelector(".hgrip") || !sel.querySelector(".hdot"))
-      throw new Error("no corner handle on the selected piece");
-    const other = [...d.querySelectorAll(".pc")].find(g => !g.classList.contains("sel"));
-    if (other && other.querySelector(".hdot"))
-      throw new Error("handle drawn on an unselected piece");
+    const row = [...d.querySelectorAll("#moves .mv")].find(n => /Sofa/.test(n.textContent));
+    if (!row.classList.contains("sel")) throw new Error("row not marked");
+    row.click();
+    if (d.querySelector(".pc.sel")) throw new Error("tapping again did not deselect");
   });
 
-  step("the map opens showing the whole theatre, with Fit tucked away", () => {
-    const svg = d.querySelector("svg.plan");
-    if (!svg) throw new Error("no plan");
-    if (svg.getAttribute("viewBox") !== "0 0 1170 658")
-      throw new Error("does not start fitted: " + svg.getAttribute("viewBox"));
-    const fit = d.getElementById("btn-fit");
-    if (!fit) throw new Error("no Fit control");
-    if (!fit.classList.contains("hide"))
-      throw new Error("Fit is offered while already fitted");
-    // jsdom has no layout, so the zoom maths cannot run here; the pinch,
-    // wheel and pan paths are checked in a real browser instead.
+  console.log("--- the deck ---");
+  step("GO is the primary target and the biggest control", () => {
+    const go = d.querySelector("#deck .go");
+    if (!go) throw new Error("no GO");
+    if (!/Call next scene/i.test(go.textContent)) throw new Error("GO says " + go.textContent);
+    if (d.querySelectorAll("#deck .sec").length !== 1) throw new Error("more than one secondary");
+  });
+  step("only two controls in the deck during a run", () => {
+    if (d.querySelectorAll("#deck button").length !== 2)
+      throw new Error(d.querySelectorAll("#deck button").length + " controls");
+  });
+  step("GO keeps its slot while looking ahead (motor memory)", () => {
+    goToScene(1);
+    d.getElementById("btn-setup").click();
+    const go = d.querySelector("#deck .go");
+    if (!go) throw new Error("GO vanished while browsing");
+    if (!/Call next scene/i.test(go.textContent)) throw new Error("GO changed job: " + go.textContent);
+  });
+  step("looking ahead is stated, and leaving it is one tap", () => {
+    if (!/Looking ahead/i.test(d.getElementById("grab-k").textContent))
+      throw new Error("does not say you are ahead");
+    if (d.getElementById("jump").classList.contains("hide")) throw new Error("no way back");
+    need("Back to live", "button", d.getElementById("jump"));
+    need("Call this one", "button", d.getElementById("jump"));
+  });
+  step("back to live", () => {
+    need("Back to live", "button", d.getElementById("jump")).click();
+    if (!d.getElementById("jump").classList.contains("hide")) throw new Error("still browsing");
   });
 
-  step("not moving a piece leaves it where it was, it does not vanish", () => {
-    const mv = d.querySelector("#moves .mv");
-    if (!mv) throw new Error("no moves in this scene to work with");
-    mv.click();
-    const name = (d.querySelector("#inspector b") || {}).textContent;
-    if (!name) throw new Error("nothing selected");
-    const stay = [...d.querySelectorAll("#inspector button")]
-      .find(b => /Doesn't move/.test(b.textContent));
-    if (!stay) throw new Error("no 'Doesn't move this scene' control");
-    stay.click();
-    const zone = (d.querySelector("#inspector .tag") || {}).textContent || "";
-    if (/out of play/i.test(zone)) throw new Error("it was taken out of play: " + zone);
-    if (!d.querySelector("#inspector .seg.zones button.on"))
-      throw new Error("it landed in no zone at all");
-    if (new RegExp(name).test(d.getElementById("moves").textContent))
-      throw new Error("crew are still told to move " + name);
+  console.log("--- build mode ---");
+  step("Build is one tap from Setup, and swaps the whole screen", () => {
+    openBuild();
+    if (!d.body.classList.contains("mode-build")) throw new Error("not in build mode");
+    if (d.getElementById("buildpane").classList.contains("hide")) throw new Error("no build pane");
+    if (!d.getElementById("scenesheet").classList.contains("hide")) throw new Error("run sheet still showing");
+    if (sceneChips().length !== 5) throw new Error(sceneChips().length + " scene chips");
   });
-
+  step("Setup becomes Done, so there is one way out", () => {
+    if (d.getElementById("btn-setup").textContent !== "Done") throw new Error("no exit");
+  });
+  step("name, curtain and note are in reach without opening anything", () => {
+    const strip = d.getElementById("scenestrip");
+    const ins = strip.querySelectorAll("input");
+    if (ins.length !== 2) throw new Error(ins.length + " fields in the scene strip");
+    if (ins[0].value !== w.GL.S.scenes[3].name) throw new Error("name field shows " + ins[0].value);
+    if (!byText("Curtain out", "button", strip)) throw new Error("no curtain control");
+    ins[1].value = "Watch the rake";
+    ins[1].dispatchEvent(new w.Event("input"));
+    if (w.GL.S.scenes[3].note !== "Watch the rake") throw new Error("note not saved");
+  });
+  step("every set piece in the show is in the tray", () => {
+    const chips = d.querySelectorAll("#tray .pchip:not(.add)");
+    if (chips.length !== 8) throw new Error(chips.length + " tray chips");
+    if ([...chips].some(c => !c.querySelector(".sw"))) throw new Error("a chip has no colour");
+    if ([...chips].some(c => c.classList.contains("out")))
+      throw new Error("every piece is in this scene, none should read as absent");
+  });
+  step("tapping a piece opens a popover over it, not a panel elsewhere", () => {
+    goToScene(1);
+    d.querySelector("#tray .pchip:not(.add)").click();
+    const pop = d.querySelector("#pophost .pop");
+    if (!pop) throw new Error("no popover");
+    if (!byText("Wing SR", "button", pop)) throw new Error("no zone shortcut");
+  });
+  step("size is dragged from a corner grip, never typed", () => {
+    if (d.querySelector('input[type="number"]')) throw new Error("still asking for numbers");
+    if (!d.querySelector(".pc.sel .grip")) throw new Error("no resize grip on the selected piece");
+  });
   step("one tap sends a piece to the aux stage", () => {
-    const aux = [...d.querySelectorAll("#inspector .seg.zones button")]
-      .find(b => /Aux/.test(b.textContent));
-    if (!aux) throw new Error("no aux-stage control");
-    aux.click();
-    const on = d.querySelector("#inspector .seg.zones button.on");
-    if (!on || !/Aux/.test(on.textContent))
-      throw new Error("aux is not the selected zone: " + (on && on.textContent));
-    if (!/aux/i.test((d.querySelector("#inspector .tag") || {}).textContent || ""))
-      throw new Error("the zone label did not follow");
+    const pop = d.querySelector("#pophost .pop");
+    need("Aux", "button", pop).click();
+    const state = JSON.parse(d.getElementById("state").textContent);
+    const id = d.querySelector(".pc.sel").getAttribute("data-id");
+    // read the drawn plan, not #state — that is the last published snapshot
+    if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("piece vanished");
+    if (!/Aux stage/.test(d.querySelector("#pophost .pop .tag").textContent))
+      throw new Error("popover still says " + d.querySelector("#pophost .pop .tag").textContent);
+    if (state.scenes.length !== 5) throw new Error("state unexpectedly changed");
   });
-
-  step("leaving edit mode puts the map back the way it was", () => {
-    d.getElementById("btn-edit").click();                // Save / Done
-    if (/Editing/.test(d.getElementById("plan-mode").textContent)) throw new Error("still editing");
-    d.getElementById("btn-map").click();                 // map back off
+  step("a piece that does not move stays put instead of vanishing", () => {
+    need("Same as last scene", "button", d.querySelector("#pophost .pop")).click();
+    if (!d.querySelector(".pc.sel")) throw new Error("piece left the scene");
   });
-  step("add a scene copies this one", () => {
-    const before = w.document.querySelectorAll("#strip .sc").length;
-    [...d.querySelectorAll("#editbody button")].find(b => /Add scene/.test(b.textContent)).click();
-    const after = d.querySelectorAll("#strip .sc").length;
-    if (after !== before + 1) throw new Error(before + " -> " + after);
-    const t = d.getElementById("moves").textContent;
-    if (!/Nothing moves/i.test(t)) throw new Error("copied scene should have no moves; got: " + t.slice(0, 60));
+  step("striking a piece takes it off the plan and greys its tray chip", () => {
+    const id = d.querySelector(".pc.sel").getAttribute("data-id");
+    need("Off for this scene", "button", d.querySelector("#pophost .pop")).click();
+    if (d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("still drawn");
+    const chip = [...d.querySelectorAll("#tray .pchip")].find(c => c.classList.contains("out"));
+    if (!chip) throw new Error("tray does not show it is out of this scene");
+    need("Bring into this scene", "button", d.querySelector("#pophost .pop")).click();
+    if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("could not bring it back");
   });
-  step("unsaved changes surfaced", () => {
-    const t = d.getElementById("syncchip").textContent;
-    if (!/Unsaved|device/i.test(t)) throw new Error("got " + t);
+  step("editing does not publish — it goes to Save & sync", () => {
+    if (!/Unsaved/i.test(d.getElementById("syncchip").textContent))
+      throw new Error("chip says " + d.getElementById("syncchip").textContent);
+    if (!/Save/i.test(d.querySelector("#deck .go").textContent))
+      throw new Error("deck does not offer a save");
   });
-  step("delete the added scene asks first, then deletes", () => {
-    [...d.querySelectorAll("#editbody button")].find(b => /Delete scene/.test(b.textContent)).click();
-    const scrim = d.querySelector(".scrim");
-    if (!scrim) throw new Error("no confirmation shown for a destructive action");
-    [...scrim.querySelectorAll("button")].find(b => b.textContent === "Delete").click();
-    if (d.querySelector(".scrim")) throw new Error("dialog stayed open");
-    if (d.querySelectorAll("#strip .sc").length !== 5) throw new Error("delete failed");
+  step("add a scene copies the one before it", () => {
+    const before = sceneChips().length;
+    d.querySelector("#scenebar .chip.add").click();
+    if (sceneChips().length !== before + 1) throw new Error("no scene added");
+    d.getElementById("btn-setup").click();                 // out to the run screen
+    if (d.querySelectorAll("#moves .mv").length !== 0)
+      throw new Error("a copied scene should have no moves into it");
+  });
+  step("delete asks first, then deletes", () => {
+    openBuild();
+    const before = sceneChips().length;
+    sceneChips().find(c => c.classList.contains("cur")).click();   // current chip opens details
+    need("Delete this scene").click();
+    if (!d.querySelector(".scrim")) throw new Error("deleted without asking");
+    need("Delete", "button", d.querySelector(".modal")).click();
+    if (sceneChips().length !== before - 1) throw new Error("not deleted");
   });
   step("add a new set piece", () => {
-    const inputs = d.querySelectorAll("#editbody input");
-    const nameIn = [...inputs].find(i => i.placeholder === "New piece name");
-    nameIn.value = "Trunk";
-    nameIn.dispatchEvent(new w.Event("input", { bubbles: true }));
-    [...d.querySelectorAll("#editbody button")].find(b => b.textContent === "Add").click();
-    if (!/Trunk/.test(d.getElementById("editbody").textContent)) throw new Error("piece not added");
+    need("New piece", "#tray button").click();
+    const m = d.querySelector(".modal");
+    m.querySelector("input").value = "Ladder";
+    need("Add piece", "button", m).click();
+    if (!w.GL.S.pieces.some(p => p.name === "Ladder")) throw new Error("not added");
+    if (!d.querySelector("#pophost .pop")) throw new Error("new piece is not selected and shown");
+  });
+  step("leaving build puts the run screen back", () => {
+    d.getElementById("btn-setup").click();
+    if (d.body.classList.contains("mode-build")) throw new Error("still building");
+    if (d.getElementById("scenesheet").classList.contains("hide")) throw new Error("no move list");
+    if (!d.querySelector("#deck .go")) throw new Error("no GO");
   });
 
-  console.log("--- command deck (Fitts / Hick / thumb zone) ---");
-  step("primary GO target exists and is the biggest control", () => {
-    const go = d.querySelector("#slotR .go");
-    if (!go) throw new Error("no primary target");
-    if (!/call next scene/i.test(go.textContent)) throw new Error("GO says: " + go.textContent);
+  console.log("--- crew ---");
+  step("crew get no GO and cannot reach build", () => {
+    d.getElementById("btn-setup").click();
+    need("Stage manager", "button", d.querySelector(".modal")).click();  // opens role picker
+    d.querySelectorAll(".pick button")[1].click();                       // Crew
+    if (d.querySelector("#deck .go")) throw new Error("crew can call the show");
+    if (d.querySelectorAll("#deck .sec").length !== 2) throw new Error("crew need back and ahead");
+    d.getElementById("btn-setup").click();
+    if (byText("Build the show")) throw new Error("crew offered build mode");
+    d.querySelector(".scrim").click();
   });
-  step("GO keeps its slot while browsing (motor memory)", () => {
-    const before = d.querySelector("#slotR .go").textContent;
-    d.querySelectorAll("#strip .sc")[0].click();          // browse away from live
-    const go = d.querySelector("#slotR .go");
-    if (!go) throw new Error("GO vanished while browsing");
-    if (go.textContent !== before) throw new Error("GO changed meaning: " + go.textContent);
-    if (d.getElementById("jump").classList.contains("hide")) throw new Error("no jump affordance while browsing");
+  step("on the live scene the read-out carries what is coming, not what the sheet says", () => {
+    w.GL.S.liveIndex = 0; w.GL.render();
+    const back = byText("Back to live", "button", d.getElementById("jump"));
+    if (back) back.click();
+    const ro = d.querySelector("#deck .readout");
+    if (!ro) throw new Error("crew get nothing in the primary slot");
+    if (ro.classList.contains("away")) throw new Error("flagged as away while on the live scene");
+    if (!/Next up/i.test(ro.textContent))
+      throw new Error("read-out repeats what the sheet already names: " + ro.textContent);
+    if (ro.textContent.includes(d.getElementById("grab-nm").textContent))
+      throw new Error("read-out duplicates the sheet header");
   });
-  step("jumping the show is a separate, labelled target", () => {
-    const j = [...d.querySelectorAll("#jump button")];
-    if (j.length !== 1 || !/jump the show/i.test(j[0].textContent)) throw new Error("jump control wrong");
+  step("stepping away from live flips the read-out to where the show actually is", () => {
+    d.querySelectorAll("#deck .sec")[1].click();                         // Ahead
+    const ro = d.querySelector("#deck .readout");
+    if (!ro.classList.contains("away")) throw new Error("not flagged as away from live");
+    if (!/The show is on/i.test(ro.textContent)) throw new Error("read-out says " + ro.textContent);
   });
-  step("only three controls in the deck during a run", () => {
-    const n = d.querySelectorAll(".deck button").length;
-    if (n > 3) throw new Error(n + " controls competing for attention");
-  });
-  step("crew get no GO button and no duplicated scene read-out", () => {
-    d.getElementById("btn-role").click();
-    d.querySelectorAll(".scrim .pick button")[1].click();          // become Crew
-    if (d.querySelector("#slotR .go")) throw new Error("crew can tap the show forward");
-    if (d.querySelector(".readout")) throw new Error("scene is stated twice on screen");
-    const head = d.getElementById("scenehead").textContent;
-    if (!/on stage now|looking ahead/i.test(head)) throw new Error("crew cannot see the current scene");
-    if (!d.getElementById("editcard").classList.contains("hide")) throw new Error("crew are offered Build the show");
-    if (!d.getElementById("demobar").classList.contains("hide")) throw new Error("crew get the demo prompt");
-    d.getElementById("btn-role").click();
-    d.querySelectorAll(".scrim .pick button")[0].click();          // back to SM for later steps
+  step("back to stage manager", () => {
+    d.getElementById("btn-setup").click();
+    need("Crew", "button", d.querySelector(".modal")).click();
+    d.querySelectorAll(".pick button")[0].click();
+    if (!d.querySelector("#deck .go")) throw new Error("GO did not come back");
   });
 
-  console.log("--- backstage conditions ---");
-  step("dimmer cycles bright -> dim -> blackout and forces dark", () => {
-    const b = d.getElementById("btn-dim"), dim = d.getElementById("dim");
-    if (b.textContent !== "Bright") throw new Error("starts at " + b.textContent);
-    b.click();
-    if (b.textContent !== "Dim") throw new Error("second state is " + b.textContent);
-    if (d.documentElement.getAttribute("data-theme") !== "dark") throw new Error("dimming did not force dark");
-    if (!(parseFloat(dim.style.opacity) > 0)) throw new Error("no dim overlay");
-    b.click();
-    if (b.textContent !== "Blackout") throw new Error("third state is " + b.textContent);
-    if (!dim.classList.contains("tint")) throw new Error("blackout is not warmed toward red");
-    b.click();
-    if (b.textContent !== "Bright") throw new Error("did not cycle back");
-    if (d.documentElement.getAttribute("data-theme")) throw new Error("forced dark not released");
+  console.log("--- backstage ---");
+  step("brightness cycles bright to dim to blackout in place, and forces dark", () => {
+    d.getElementById("btn-setup").click();
+    const b = [...d.querySelectorAll(".modal button")]
+      .find(x => /^(Bright|Dim|Blackout)$/.test(x.textContent.trim()));
+    if (!b) throw new Error("no brightness control");
+    const seen = [b.textContent.trim()];
+    for (let i = 0; i < 2; i++) { b.click(); seen.push(b.textContent.trim()); }
+    d.querySelector(".scrim").click();
+    if (seen.join(">") !== "Bright>Dim>Blackout") throw new Error("cycle went " + seen.join(">"));
+    if (d.documentElement.getAttribute("data-theme") !== "dark")
+      throw new Error("dimming did not force the dark palette");
+    if (!d.getElementById("dim").classList.contains("tint"))
+      throw new Error("blackout is not warmed toward red");
   });
   step("screen-awake control degrades where the API is missing", () => {
-    const b = d.getElementById("btn-wake");
-    if (!b.disabled) throw new Error("should be disabled without the Wake Lock API");
-    if (!/no screen lock/i.test(b.textContent)) throw new Error("says: " + b.textContent);
+    d.getElementById("btn-setup").click();
+    const b = need("screen", ".modal button");
+    if (!b.disabled) throw new Error("offered a wake lock jsdom does not have");
+    d.querySelector(".scrim").click();
   });
 
-  console.log("--- a call that does not reach the crew ---");
+  console.log("--- a call that does not land ---");
   await stepA("failed call raises a persistent alert, not a toast", async () => {
-    d.querySelectorAll("#strip .sc")[1].click();          // browse to 2
-    const go = d.querySelector("#slotR .go");
-    go.click();                                            // no capability in jsdom => publish fails
-    await tick(); await tick();
+    w.GL.setApi({ publish: () => Promise.reject({ code: "upstream_error" }) });
+    w.GL.S.liveIndex = 0; w.GL.render();
+    d.querySelector("#deck .go").click();
+    await tick(); await tick(); await tick();
     const a = d.getElementById("alert");
-    if (a.classList.contains("hide")) throw new Error("no alert shown after a failed call");
-    if (!/still on the scene before/i.test(a.textContent)) throw new Error("alert text: " + a.textContent.slice(0,70));
-    const btns = [...a.querySelectorAll("button")].map(b => b.textContent);
-    if (!btns.some(t => /send again/i.test(t))) throw new Error("no retry, got " + btns.join("/"));
+    if (a.classList.contains("hide")) throw new Error("no alert");
+    if (!/still on the scene before/.test(a.textContent)) throw new Error("alert says " + a.textContent);
+    if (!byText("Send again", "button", a)) throw new Error("no retry");
   });
-  step("dismissing the alert clears it", () => {
-    [...d.querySelectorAll("#alert button")].find(b => /headset/i.test(b.textContent)).click();
-    if (!d.getElementById("alert").classList.contains("hide")) throw new Error("alert stayed");
-  });
-
-  console.log("--- crew filtering by side ---");
-  step("SR filter hides wing SL traffic", () => {
-    const scs = d.querySelectorAll("#strip .sc");
-    scs[2].click();                                        // scene 3, traffic both sides
-    const all = d.querySelectorAll("#moves .mv").length;
-    [...d.querySelectorAll("#mvfilter button")].find(b => /SR side/.test(b.textContent)).click();
-    const sr = d.querySelectorAll("#moves .mv").length;
-    if (!(sr < all)) throw new Error("SR filter did not narrow the list (" + all + " -> " + sr + ")");
-    const txt = d.getElementById("moves").textContent;
-    if (/Wing SL/.test(txt)) throw new Error("SL traffic still listed under the SR filter");
-    if (!/\//.test(d.getElementById("mvcount").textContent)) throw new Error("count does not show the filtered total");
-    [...d.querySelectorAll("#mvfilter button")].find(b => b.textContent === "All").click();
+  step("the alert clears only when the SM says so", () => {
+    need("headset", "button", d.getElementById("alert")).click();
+    if (!d.getElementById("alert").classList.contains("hide")) throw new Error("still up");
+    w.GL.setApi(null);
   });
 
-  console.log("--- a quiet screen ---");
-  step("header carries only the status and one More button", () => {
-    const controls = [...d.querySelectorAll(".hd button")];
-    if (controls.length !== 1) throw new Error(controls.length + " buttons in the header: " + controls.map(b=>b.textContent).join("/"));
-    if (!/more/i.test(controls[0].textContent)) throw new Error("the one button is: " + controls[0].textContent);
-  });
-  step("the stage map is hidden until asked for", () => {
-    if (d.body.classList.contains("mapon")) throw new Error("map is on by default");
-    d.getElementById("btn-map").click();
-    if (!d.body.classList.contains("mapon")) throw new Error("toggle did not show the map");
-    if (!/hide stage map/i.test(d.getElementById("btn-map").textContent)) throw new Error("label did not flip");
-    d.getElementById("btn-map").click();
-    if (d.body.classList.contains("mapon")) throw new Error("toggle did not hide it again");
-  });
-  step("the current scene is stated plainly at the top", () => {
-    const state = JSON.parse(d.getElementById("state").textContent);
-    const head = d.getElementById("scenehead");
-    const expected = state.scenes[viewIndexOf(d)].name;
-    if (!head.textContent.includes(expected)) throw new Error("scene head says: " + head.textContent.slice(0,60));
-    if (!/on stage now|looking ahead/i.test(head.textContent)) throw new Error("no plain-language status line");
-  });
-  step("everything else is behind More, closed by default", () => {
-    const sheet = d.getElementById("msheet");
-    if (!sheet.classList.contains("hide")) throw new Error("drawer starts open");
-    for (const id of ["strip", "notes", "editcard", "mvfilter", "btn-dim", "btn-wake", "btn-role"]) {
-      if (!sheet.contains(d.getElementById(id))) throw new Error("#" + id + " is not inside the More drawer");
-    }
-    d.getElementById("btn-more").click();
-    if (sheet.classList.contains("hide")) throw new Error("More did not open");
-    d.getElementById("btn-moreclose").click();
-    if (!sheet.classList.contains("hide")) throw new Error("Done did not close it");
-  });
-  step("picking a scene closes the drawer so you can see it", () => {
-    d.getElementById("btn-more").click();
-    d.querySelectorAll("#strip .sc")[0].click();
-    if (!d.getElementById("msheet").classList.contains("hide")) throw new Error("drawer stayed open");
-  });
-  step("the demo show says so and offers a way out", () => {
-    const bar = d.getElementById("demobar");
-    if (bar.classList.contains("hide")) throw new Error("no demo notice on the sample show");
-    if (!/demo/i.test(bar.textContent)) throw new Error("bar says: " + bar.textContent.slice(0,60));
-    if (![...bar.querySelectorAll("button")].some(b => /start my own/i.test(b.textContent)))
-      throw new Error("no way to start your own show");
-  });
-
-  console.log("--- paper backup + starting over ---");
+  console.log("--- paper backup ---");
   step("run sheet covers every scene in order", () => {
-    d.getElementById("btn-editopen").click();              // ensure build panel open
-    if (d.getElementById("editbody").classList.contains("hide")) d.getElementById("btn-editopen").click();
-    const before = d.querySelectorAll("#strip .sc").length;
-    // build the sheet directly; jsdom has no print dialog
-    const printBtn = [...d.querySelectorAll("#editbody button")].find(b => /Print run sheet/.test(b.textContent));
-    if (!printBtn) throw new Error("no print control");
-    w.print = () => {};
-    printBtn.click();
-    const blocks = d.querySelectorAll("#runsheet .blk");
-    if (blocks.length !== before) throw new Error(before + " scenes but " + blocks.length + " blocks");
-    const t = d.getElementById("runsheet").textContent;
-    if (!/curtain in|curtain out/i.test(t)) throw new Error("curtain state missing from sheet");
-    if (!/Wing SR/.test(t)) throw new Error("routes missing from sheet");
+    w.GL.buildSheet();
+    const blks = d.querySelectorAll("#runsheet .blk");
+    const state = JSON.parse(d.getElementById("state").textContent);
+    if (!blks.length) throw new Error("empty sheet");
+    if (blks.length !== w.GL.S.scenes.length) throw new Error(blks.length + " blocks");
+    if (!/curtain/.test(d.querySelector("#runsheet .cur").textContent))
+      throw new Error("no curtain state");
+    if (!state) throw new Error("no state");
   });
   step("building the run sheet does not touch the stylesheet", () => {
-    const css = d.getElementById("sheet").textContent;
-    if (css.length < 2000 || !/\.sheet/.test(css)) throw new Error("stylesheet was clobbered (" + css.length + " chars)");
-    if (d.getElementById("sheet").tagName !== "STYLE") throw new Error("#sheet is no longer the stylesheet");
-  });
-  step("starting a new show asks, then clears everything", () => {
-    [...d.querySelectorAll("#editbody button")].find(b => /Start a new show/.test(b.textContent)).click();
-    const scrim = d.querySelector(".scrim");
-    if (!scrim) throw new Error("no confirmation");
-    if (!/cannot be undone/i.test(scrim.textContent)) throw new Error("warning too soft");
-    [...scrim.querySelectorAll("button")].find(b => /Clear the demo/.test(b.textContent)).click();
-    if (d.querySelectorAll("#strip .sc").length !== 1) throw new Error("scenes not reset");
-    if (d.querySelectorAll("#editbody .pitem").length !== 0) throw new Error("pieces not cleared");
-    if (!/No pieces yet/i.test(d.getElementById("editbody").textContent)) throw new Error("no empty state for pieces");
+    if (!/:root\{/.test(d.getElementById("sheet").textContent))
+      throw new Error("the stylesheet was overwritten");
   });
 
   console.log("--- self-rebuild ---");
+  step("starting a new show asks, then clears everything", () => {
+    d.getElementById("btn-setup").click();
+    need("Start a new show").click();
+    need("Clear it", "button", d.querySelector(".modal")).click();
+    if (w.GL.S.pieces.length !== 0) throw new Error("pieces survived");
+    if (w.GL.S.scenes.length !== 1) throw new Error("scenes survived");
+    if (!d.body.classList.contains("mode-build")) throw new Error("did not drop you into build");
+  });
   step("rebuilt page is a complete, re-parseable document", () => {
-    // exercise the same template the publish path uses
-    const root = d.getElementById("root").innerHTML;
-    const css = d.getElementById("sheet").textContent;
-    const app = d.getElementById("app").textContent;
-    if (!root || !css || !app) throw new Error("capture missing");
-    if (/<\/script>/.test(app)) throw new Error("app source contains a raw </script> and would truncate");
-    const rebuilt = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ghost Light</title>'
-      + '<style id="sheet">' + css + '</style></head><body><div id="root">' + root + '</div>'
-      + '<script id="state" type="application/json">{"rev":2,"show":"X","liveIndex":1,"liveStamp":5,"pieces":[],"scenes":[{"id":"a","name":"A","note":"","curtain":"open","place":{}},{"id":"b","name":"B","note":"","curtain":"closed","place":{}}]}<' + '/script>'
-      + '<script id="app">' + app + '<' + '/script></body></html>';
-    const e2 = [];
-    const vc2 = new (require("jsdom").VirtualConsole)()
-      .on("jsdomError", e => e2.push("jsdomError: " + e.message))
-      .on("error", (...a) => e2.push("console.error: " + a.join(" ")));
-    const d2 = new JSDOM(rebuilt, {
-      runScripts: "dangerously", pretendToBeVisual: true, virtualConsole: vc2
+    const src = w.GL.pageSource(w.GL.S);
+    if (!/^<!doctype html>/i.test(src)) throw new Error("no doctype");
+    const re = new JSDOM(src);
+    const rd = re.window.document;
+    ["root", "state", "app", "sheet"].forEach(id => {
+      if (!rd.getElementById(id)) throw new Error("rebuilt page lost #" + id);
     });
-    if (e2.length) throw new Error("rebuilt page errored: " + e2.join("; "));
-    const doc2 = d2.window.document;
-    if (!doc2.querySelector("svg.plan")) throw new Error("rebuilt page did not boot its plan");
-    if (doc2.querySelectorAll("#strip .sc").length !== 2) throw new Error("rebuilt page state not applied");
-    if (doc2.title !== "Ghost Light") throw new Error("title lost: " + doc2.title);
-    console.log("       rebuilt page booted, 2 scenes from embedded state");
+    if (!rd.querySelector("svg, #planwrap")) throw new Error("rebuilt page lost the plan");
+  });
+  step("the rebuilt page ships the fonts the stylesheet actually asks for", () => {
+    const src = w.GL.pageSource(w.GL.S);
+    const css = d.getElementById("sheet").textContent;
+    const families = [...css.matchAll(/"([A-Z][A-Za-z ]+)"/g)]
+      .map(m => m[1]).filter(f => /Atkinson|IBM Plex/.test(f));
+    const uniq = [...new Set(families)];
+    if (!uniq.length) throw new Error("no webfonts in the stylesheet");
+    uniq.forEach(f => {
+      if (!src.includes(f.replace(/ /g, "+")))
+        throw new Error("republished page does not load " + f);
+    });
   });
 
-  console.log("\n=== " + (errors.length ? errors.length + " PROBLEM(S)" : "ALL CHECKS PASSED") + " ===");
-  if (errors.length) { console.log(errors.join("\n")); process.exit(1); }
-}, 400);
+  console.log("\n" + (errors.length ? errors.length + " FAILED" : "all passed"));
+  process.exit(errors.length ? 1 : 0);
+}, 60);

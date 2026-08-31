@@ -1,0 +1,49 @@
+<div id="root">
+  <header class="top">
+    <span class="mark"></span>
+    <span class="name" id="showname">—</span>
+    <span class="sp"></span>
+    <span class="stat" id="syncchip"><span class="word">Connecting</span></span>
+    <button class="btn sm" id="btn-setup">Setup</button>
+  </header>
+
+  <div id="scenebar" class="scenebar"></div>
+
+  <div class="stage" id="stage">
+    <div class="planwrap" id="planwrap">
+      <div class="plansvg" id="plansvg"></div>
+      <div class="planbtns" id="planbtns">
+        <button class="btn sm ic" id="btn-replay" title="Play this change again" aria-label="Play this change again">&#8635;</button>
+        <button class="btn sm hide" id="btn-fit">Fit</button>
+      </div>
+    </div>
+
+    <section class="sheet" id="scenesheet" aria-label="This scene">
+      <div class="grab" id="grab" role="button" tabindex="0">
+        <span class="k" id="grab-k">On stage now</span>
+        <span class="v">
+          <span class="num" id="grab-num">1</span>
+          <span class="nm" id="grab-nm">&#8212;</span>
+          <span class="ct" id="grab-ct"></span>
+        </span>
+      </div>
+      <div class="jump hide" id="jump"></div>
+      <div class="sheetbody" id="sheetbody">
+        <div class="alert hide" id="alert"></div>
+        <div id="moves"></div>
+        <div class="notebox hide" id="notebox"></div>
+      </div>
+    </section>
+
+    <div class="buildpane hide" id="buildpane">
+      <div class="scenestrip" id="scenestrip"></div>
+      <div class="tray" id="tray"></div>
+    </div>
+    <div class="pophost" id="pophost"></div>
+  </div>
+
+  <div class="deck" id="deck"></div>
+</div>
+
+<div class="sheetprint" id="runsheet"></div>
+<div id="dim"></div>

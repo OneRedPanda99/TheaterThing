@@ -1,2 +1,11 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# build.js joins with \n and --check compares byte for byte, so everything
+# it reads or writes has to be LF in the working tree too. Left to
+# `text=auto`, a Windows checkout turns these into CRLF and the drift
+# check fails against files that are perfectly up to date.
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf

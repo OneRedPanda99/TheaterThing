@@ -25,6 +25,8 @@ scenes.
   the stage.
 - **Calling the show.** The SM advances the scene; every open device reloads to it and
   plays the transition.
+- **Two screens, not seven modes.** *Run* is what everybody stares at during a show.
+  *Build* is where the stage manager makes it. Nothing else.
 - **Backstage mode.** A three-step dimmer (bright / dim / blackout, the last warmed
   toward red) and a screen-wake lock, because a phone at full brightness in the wings
   spills light into the house.
@@ -43,7 +45,7 @@ Consequences worth knowing:
 - Propagation is roughly **1-3 seconds plus a page reload**, not a websocket. Fine for
   calling scene changes; not built for sub-second cueing.
 - Because a reload wipes everything in memory, per-device preferences (role, dimmer,
-  filter, unsaved edits) live in `localStorage`.
+  sheet height, unsaved edits) live in `localStorage`.
 - Editing does **not** publish. Changes collect locally and go out on an explicit
   **Save & sync**. Only calling a scene publishes immediately.
 - A viewer with read-only access cannot publish; the page detects the rejection and
@@ -55,35 +57,92 @@ state.
 
 ## Interface notes
 
-The command deck is pinned to the bottom edge of the screen deliberately:
+### Run
+
+The plan is always on screen — it is the thing the app is for, so there is no toggle
+hiding it. Under it sits a sheet carrying the scene, its move list and its note.
+
+- On a **phone** the sheet floats over the plan at one of three heights. Drag its
+  handle, or tap it to step through. The resting height is worked backwards from the
+  map: the plan gets exactly the room its own 1170x658 shape needs at that width, and
+  the list gets everything else. A phone screen is far taller than a theatre is deep,
+  so splitting the screen in half would letterbox the plan into a thin band and starve
+  the list at the same time.
+- On an **iPad** the sheet stops being an overlay. Portrait stacks plan over list;
+  landscape puts them side by side. Nobody has to choose.
+
+The command deck is pinned to the bottom edge deliberately:
 
 - The primary target sits **on** the screen edge, so it cannot be overshot, and it is
   by far the largest control on the page.
-- It **never moves or changes meaning**, including while browsing other scenes, so the
-  thumb learns one location. Jumping the show to a different scene is a separate,
-  explicitly labelled control that appears above the rail rather than replacing the
-  primary.
-- No more than three controls are reachable during a run. Everything else lives behind
-  the Build panel.
-- Crew get the same block in the same place, but flat and unclickable — a glanceable
-  read-out rather than a button that could push the show forward by accident.
+- It **never moves or changes meaning**, including while looking ahead at another
+  scene, so the thumb learns one location. Jumping the show to the scene you are
+  looking at is a separate, explicitly labelled control in the sheet header.
+- Only two controls are reachable during a run.
+- Crew get the same block in the same place, but flat and unclickable. While they are
+  on the live scene it names **what is coming**, because the sheet directly above
+  already names what is on — and repeating it would waste the biggest readable thing
+  on the screen.
+
+Nothing in the app scrolls the document; only the panes scroll. The deck therefore
+cannot be pushed off a phone screen mid-show, and it clears the home indicator.
+
+### Build
+
+A separate screen, not a mode bleeding through the run screen. Scenes run along the
+top, the plan fills the middle, and the set pieces run along the bottom.
+
+- Tap a scene chip to go to it; tap the one you are already on for its details.
+- The scene's **name, curtain and note** sit directly under the plan, because those are
+  what a stage manager changes on nearly every pass. Reorder and delete — rarer, and
+  riskier — stay one tap further in.
+- Tap a piece and a popover opens **over the spot it is in**, carrying its zone
+  shortcuts, its crew note, and what to do with it this scene.
+- Size is dragged from a corner grip. Nobody has to think in plan units.
+- Nothing is nested more than one tap deep.
 
 ## Running it
 
 Open `index.html` in a browser, or visit the Pages site.
 
-`ghost-light.html` is the source of truth, authored as a **fragment** — no `<!doctype>`,
-`<html>` or `<body>` — because the Claude Artifact host supplies that shell itself.
-`index.html` is generated from it by `build-pages.js`, which adds the shell plus the
-`viewport` meta the fragment has no way to carry. That meta matters: without it a phone
-lays the page out at ~980px and zooms out, which defeats a command deck sized for a
-thumb.
+### Source layout
 
-```bash
-npm run build        # regenerate index.html after editing ghost-light.html
+The app has to **ship** as one self-contained file, because syncing works by the running
+page capturing its own markup, stylesheet and script and republishing them. But one
+1,800-line HTML file is not something a person can edit. So the source is split for
+humans and inlined for the browser:
+
+```
+src/
+  head.html          title and font links
+  style.css
+  body.html          the markup
+  show.json          the show the page ships with
+  parts/
+    00-boot.js       source capture, state, localStorage, helpers
+    10-model.js      zones, routes, and the scene diff — no DOM
+    20-plan.js       the SVG: draw, animate, pinch, pan, drag
+    30-run.js        the run screen
+    40-build.js      build mode, setup, the run sheet, modals
+    50-sync.js       publish, call, dimmer, wake lock
+    90-main.js       one render, and the wiring
+build.js             assembles both shipped files
 ```
 
-CI fails if `index.html` drifts from the source, so the two cannot silently diverge.
+`build.js` writes **two** generated, committed files. `ghost-light.html` is the Artifact
+source, authored as a **fragment** — no `<!doctype>`, `<html>` or `<body>` — because the
+Claude Artifact host supplies that shell itself. `index.html` is the same content wrapped
+in a real document, which is what Pages needs: without a `viewport` meta a phone lays the
+page out at ~980px and zooms out, defeating a command deck sized for a thumb.
+
+Filename order in `parts/` is load order. The parts are concatenated into a single IIFE
+and share one scope, so `00-boot.js` has to come first.
+
+```bash
+npm run build        # regenerate both files after editing src/
+```
+
+Edit `src/`, never the output. CI fails if either generated file drifts.
 
 ### Live sync only exists on the Artifact
 
@@ -99,9 +158,12 @@ npm ci
 npm test
 ```
 
-37 checks covering route derivation, move-list generation, the command deck's
-positional guarantees, backstage modes, failed-call handling, the print sheet, and the
+48 checks covering route derivation, move-list generation, the command deck's positional
+guarantees, build mode, backstage modes, failed-call handling, the print sheet, and the
 self-rebuild round trip.
+
+They look for controls by **the words on them** rather than by class name, so a test
+breaks when the interface stops saying what it does — not when a selector is renamed.
 
 They run on every push and pull request to `main` against Node 20 and 22
 (`.github/workflows/tests.yml`). The suite boots the page in a headless DOM, so a
@@ -113,5 +175,6 @@ than surfacing during a performance.
 - Sync latency is bounded by publish + reload, as above.
 - Read-only viewers cannot record anything, so there is no per-crew-member tick-off of
   completed moves. Adding it would require giving every device write access.
-- Move assignment to named crew members is not implemented; the side filter
-  (`All` / `SR side` / `SL side`) is the substitute.
+- Move assignment to named crew members is not implemented. Everyone sees every move.
+- jsdom has no layout, so the sheet heights, popover placement, pinch and pan are only
+  asserted as far as they can be there; those are checked in a browser.

@@ -4,8 +4,8 @@
   "description": "Live set-piece tracker for a theatre crew: the stage manager calls a scene and every phone follows an animated ground plan.",
   "private": true,
   "scripts": {
-    "build": "node build-pages.js",
-    "check:pages": "node build-pages.js --check",
+    "build": "node build.js",
+    "check:pages": "node build.js --check",
     "test": "node test.js"
   },
   "devDependencies": {
