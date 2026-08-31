@@ -1,0 +1,393 @@
+/* ===============================================================
+   Ghost Light — a lighting plot seen under worklights.
+   Flat, matte, hard-edged. No gradients, no floating cards.
+
+   The shell is one fixed grid, four rows:
+     topbar / scenebar (build only) / stage / deck
+   The stage row owns the ground plan and, on a phone, the sheet
+   that slides over it. Nothing in the app scrolls the document —
+   only the panes scroll — so the deck can never be pushed off a
+   phone screen mid-show.
+   =============================================================== */
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overflow:hidden;overscroll-behavior:none}
+img,svg{display:block;max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,h4,p{margin:0}
+
+:root{
+  /* Atkinson Hyperlegible: every letterform is shaped to be hard to
+     confuse with another, which is what you want on a phone, in a
+     wing, half-dark, mid-change. */
+  --ui:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:12px; --r-sm:9px;
+  --ground:#E4E5E1; --surface:#F7F7F5; --sunk:#DCDDD8;
+  --rule:#C3C6BE; --rule2:#A8ACA2;
+  --ink:#14171B; --dim:#5D6470;
+  --work:#8A4A00;          /* worklight amber — the one accent */
+  --work-ink:#FFFFFF;
+  --gel-rose:#A8235A; --gel-congo:#2438A8; --gel-green:#2F6B22;
+  --stage-fill:#F1E7D2; --wing-fill:#E2E5F2; --aux-fill:#F2DFE7; --void:#D3D5CF;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+  --pane:190px;            /* height of whatever pane sits under the plan */
+  --tap:46px;              /* nothing a thumb must hit is smaller */
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#06080B; --surface:#0E1116; --sunk:#04060A;
+    --rule:#1D232C; --rule2:#2C333F;
+    --ink:#EDE9E0; --dim:#7C879B;
+    --work:#FFB020; --work-ink:#140C00;
+    --gel-rose:#FF5E8A; --gel-congo:#6E8BFF; --gel-green:#86E36B;
+    --stage-fill:#191509; --wing-fill:#0D1322; --aux-fill:#1E0F1A; --void:#04060A;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#06080B; --surface:#0E1116; --sunk:#04060A;
+  --rule:#1D232C; --rule2:#2C333F;
+  --ink:#EDE9E0; --dim:#7C879B;
+  --work:#FFB020; --work-ink:#140C00;
+  --gel-rose:#FF5E8A; --gel-congo:#6E8BFF; --gel-green:#86E36B;
+  --stage-fill:#191509; --wing-fill:#0D1322; --aux-fill:#1E0F1A; --void:#04060A;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--ui);
+  font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent}
+.hide{display:none !important}
+:focus-visible{outline:2px solid var(--work);outline-offset:1px}
+
+/* ---------------- the shell ----------------
+   Rows are placed explicitly, not by source order: the scene bar is
+   display:none outside build mode, and an implicitly placed grid
+   drops the row entirely when that happens — which hands the stage's
+   1fr to the deck and squashes the plan to nothing. */
+#root{position:fixed;inset:0;display:grid;
+  grid-template-rows:auto auto minmax(0,1fr) auto;
+  padding-top:var(--safe-t)}
+.top{grid-row:1}
+.scenebar{grid-row:2}
+.stage{grid-row:3}
+.deck{grid-row:4}
+
+/* ---------------- topbar ---------------- */
+.top{display:flex;align-items:center;gap:10px;padding:8px 12px;
+  background:var(--surface);border-bottom:1px solid var(--rule)}
+.top .mark{width:9px;height:9px;border-radius:50%;background:var(--work);flex:none}
+.top .name{font-weight:700;font-size:14px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top .sp{margin-left:auto}
+.stat{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.stat::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.stat.ok::before{background:var(--gel-green)}
+.stat.warn::before{background:var(--gel-rose)}
+@media(max-width:430px){ .stat .word{display:none} }
+
+/* ---------------- buttons ---------------- */
+.btn{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);
+  padding:10px 14px;font-size:14px;font-weight:500;cursor:pointer;
+  min-height:var(--tap);display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn:hover:not(:disabled){background:var(--sunk)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.sm{min-height:38px;padding:7px 11px;font-size:12.5px}
+.btn.on{background:var(--work);border-color:var(--work);color:var(--work-ink);font-weight:700}
+.btn.hot{color:var(--gel-rose)}
+.btn.wide{width:100%}
+.seg{display:flex;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:10px 12px;font-size:13.5px;cursor:pointer;
+  min-height:var(--tap);flex:1 1 auto}
+.seg button + button{border-left:1px solid var(--rule)}
+.seg button.on{background:var(--work);color:var(--work-ink);font-weight:700}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row + .row{margin-top:9px}
+input[type=text],textarea{background:var(--sunk);border:1px solid var(--rule);
+  border-radius:var(--r-sm);padding:10px 12px;font-size:16px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:64px;font-family:inherit;line-height:1.4}
+label.f{display:flex;flex-direction:column;gap:4px;flex:1 1 140px}
+label.f > span{font-size:12px;color:var(--dim)}
+.tag{font-size:12px;color:var(--dim)}
+.help{font-size:12.5px;color:var(--dim);line-height:1.4}
+
+/* ---------------- scenebar (build mode only) ---------------- */
+.scenebar{display:none;gap:6px;padding:8px 10px;overflow-x:auto;
+  background:var(--surface);border-bottom:1px solid var(--rule);
+  scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+body.mode-build .scenebar{display:flex}
+.chip{flex:none;border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);
+  cursor:pointer;padding:7px 12px;min-height:var(--tap);display:flex;flex-direction:column;
+  justify-content:center;gap:1px;text-align:left;max-width:180px}
+.chip .n{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.03em}
+.chip .t{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.cur{background:var(--work);border-color:var(--work);color:var(--work-ink)}
+.chip.cur .n{color:var(--work-ink);opacity:.85}
+.chip.live{box-shadow:inset 0 0 0 2px var(--gel-green)}
+.chip.add{justify-content:center;align-items:center;font-size:19px;padding:7px 15px;color:var(--dim)}
+
+/* ---------------- stage row ---------------- */
+.stage{position:relative;min-height:0;background:var(--void)}
+/* The plan stops where the pane below it starts — the move sheet during
+   a run, the piece tray while building. Laying it out underneath and
+   letting the pane cover it would centre the theatre on a box half of
+   which nobody can see. */
+.planwrap{position:absolute;top:0;left:0;right:0;bottom:var(--pane);overflow:hidden}
+.plansvg{position:absolute;inset:0}
+svg.plan{width:100%;height:100%;display:block;touch-action:none}
+/* The popover layer floats over the stage without taking a grid cell. */
+.pophost{position:absolute;inset:0;pointer-events:none;z-index:20}
+.pophost > *{pointer-events:auto}
+/* Controls that live on the map itself. Bottom right, because the
+   theatre is widest across the top and the zone names sit low on the
+   left — this is the one corner nothing else wants. */
+.planbtns{position:absolute;bottom:8px;right:8px;display:flex;gap:6px;z-index:5}
+.planbtns .btn{background:var(--surface);opacity:.92;min-height:38px;padding:7px 11px;font-size:12.5px}
+.planbtns .btn.ic{width:38px;padding:0;font-size:17px;line-height:1}
+
+/* ---------------- ground plan ---------------- */
+.zone-fill-stage{fill:var(--stage-fill)}
+.zone-fill-wing{fill:var(--wing-fill)}
+.zone-fill-aux{fill:var(--aux-fill)}
+.zone-edge{fill:none;stroke:var(--rule2);stroke-width:1.5}
+.zone-edge.stage{stroke:var(--work);stroke-opacity:.65}
+.zone-edge.wing{stroke:var(--gel-congo);stroke-opacity:.55}
+.zone-edge.aux{stroke:var(--gel-rose);stroke-opacity:.6}
+.zone-name{font-family:var(--ui);font-weight:700;letter-spacing:.02em;
+  text-transform:uppercase;fill:var(--dim)}
+.grid-line{stroke:var(--rule2);stroke-dasharray:2 6;stroke-width:1;opacity:.7}
+.grid-tag{font-family:var(--mono);fill:var(--dim);opacity:.6}
+.plan-note{font-family:var(--ui);fill:var(--dim);opacity:.75}
+.house{fill:none;stroke:var(--rule2);stroke-width:1;stroke-dasharray:2 7}
+.house-tag{font-family:var(--ui);font-weight:700;letter-spacing:.05em;fill:var(--dim);opacity:.7}
+.curtain{fill:var(--gel-rose);opacity:.8}
+.curtain-rod{stroke:var(--rule2);stroke-width:1.5;opacity:.6}
+.route{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:7 5;opacity:.9}
+.route.dim{stroke:var(--dim);opacity:.22}
+.pc{cursor:pointer}
+.pc rect{stroke-width:1.5}
+.pc .cap{font-family:var(--ui);pointer-events:none}
+.pc .halo{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:4 3;opacity:0}
+.pc.sel .halo{opacity:1}
+.pc .note-dot{fill:var(--ink);opacity:.7}
+body.mode-build .pc{cursor:grab}
+.pc.dragging{cursor:grabbing}
+.pc.dragging .body{stroke:var(--work);stroke-width:3}
+/* Corner grip, build mode, selected piece only: drag it to resize.
+   The visible square stays small so it does not hide the piece; a
+   transparent square under it gives the thumb something to hit. */
+.grip{fill:var(--work);stroke:var(--work-ink);stroke-width:1.5;cursor:nwse-resize}
+.grip-hit{fill:transparent;cursor:nwse-resize}
+
+/* ---------------- the sheet (phone) ----------------
+   Height is animated on purpose, and transform is not a substitute.
+   The number being animated is --pane, which the plan reads too: the
+   sheet grows and the map shrinks by the same amount, together. A
+   translateY would slide the sheet while the map jumped to its final
+   size underneath it.
+
+   The cost is bounded — the transition runs for 220ms on a snap, and
+   is switched off entirely while a finger is dragging, when the height
+   is written directly every frame. `contain` keeps the relayout inside
+   the sheet rather than letting it walk back up the tree. */
+.sheet{position:absolute;left:0;right:0;bottom:0;height:var(--pane);
+  background:var(--surface);border-top:1px solid var(--rule2);
+  border-radius:14px 14px 0 0;z-index:10;contain:layout;
+  display:grid;grid-template-rows:auto auto minmax(0,1fr);
+  transition:height .22s cubic-bezier(.32,.72,0,1)}
+.sheet.dragging,.sheet.noanim{transition:none}
+.grab{padding:7px 14px 9px;cursor:grab;touch-action:none;text-align:left;
+  border:0;border-bottom:1px solid var(--rule);background:none;width:100%;display:block;
+  -webkit-user-select:none;user-select:none}
+.grab::before{content:"";display:block;width:38px;height:4px;border-radius:2px;
+  background:var(--rule2);margin:0 auto 9px}
+.grab .k{font-size:11.5px;color:var(--work);text-transform:uppercase;letter-spacing:.05em}
+.grab .k.ahead{color:var(--gel-congo)}
+.grab .v{display:flex;align-items:baseline;gap:9px;margin-top:2px}
+.grab .v .num{font-family:var(--mono);font-size:15px;color:var(--dim);flex:none}
+.grab .v .nm{font-weight:700;font-size:20px;line-height:1.12;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grab .v .ct{margin-left:auto;flex:none;font-size:12px;color:var(--dim)}
+.sheetbody{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* Looking at a scene that is not the one being called is a state you
+   must be able to leave in one tap, from where your eyes already are. */
+.jump{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--sunk);
+  border-bottom:1px solid var(--rule)}
+.jump .t{flex:1;min-width:0;font-size:12.5px;color:var(--dim);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jump .btn{min-height:40px;padding:8px 12px;font-size:12.5px}
+
+/* ---------------- move list ---------------- */
+.mv{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;border:0;
+  background:none;width:100%;text-align:left;cursor:pointer;
+  border-bottom:1px solid var(--rule)}
+.mv:last-child{border-bottom:0}
+.mv.sel{background:var(--sunk)}
+.mv .sw{width:4px;align-self:stretch;min-height:30px;border-radius:2px;flex:none}
+.mv .txt{min-width:0;flex:1}
+.mv .nm{font-size:15px;font-weight:700}
+.mv .nm .verb{color:var(--work);font-weight:400;margin-right:7px;
+  text-transform:uppercase;font-size:11.5px;letter-spacing:.05em}
+.mv .path{font-size:13px;color:var(--dim);margin-top:3px;
+  display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.mv .path .z{white-space:nowrap}
+.mv .path .via{color:var(--work)}
+.mv .path .ar{opacity:.5}
+.mv .hint{font-size:12.5px;color:var(--ink);opacity:.75;margin-top:4px}
+.empty{color:var(--dim);font-size:13.5px;padding:18px 14px;line-height:1.5}
+.notebox{padding:14px;border-top:1px solid var(--rule);font-size:13.5px}
+.notebox b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--dim);margin-bottom:5px;font-weight:700}
+
+/* ---------------- the build pane ----------------
+   Scene details on top, set pieces underneath. A wide theatre in a
+   tall phone box letterboxes however you fit it, so the room the plan
+   cannot use goes to the two things a stage manager edits most. */
+.buildpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
+  background:var(--surface);border-top:1px solid var(--rule2)}
+.scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+  padding:9px 10px;border-bottom:1px solid var(--rule)}
+.scenestrip input{flex:1 1 150px;padding:8px 10px}
+.scenestrip .seg button{min-height:40px;padding:8px 12px;font-size:13px}
+.scenestrip .btn{min-height:40px}
+.scenestrip .note{flex:1 1 190px}
+.tray{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;
+  scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.pchip{flex:none;display:flex;align-items:center;gap:8px;cursor:pointer;
+  border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);
+  padding:8px 12px;min-height:var(--tap);font-size:13.5px;white-space:nowrap}
+.pchip .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.pchip.out{opacity:.5;border-style:dashed}
+.pchip.sel{border-color:var(--work);box-shadow:inset 0 0 0 1px var(--work)}
+.pchip.add{color:var(--dim)}
+
+/* ---------------- piece popover (build mode) ---------------- */
+.pop{position:absolute;z-index:20;width:min(300px,calc(100% - 20px));
+  background:var(--surface);border:1px solid var(--rule2);border-radius:var(--r);
+  padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.pop .hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.pop .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
+.pop .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------------- deck ---------------- */
+/* Fitts's law: the primary target sits ON the bottom edge, is the
+   largest thing on screen, and never changes slot — so the thumb
+   learns one location and stops aiming. */
+.deck{background:var(--surface);border-top:1px solid var(--rule2);
+  padding:9px 10px calc(9px + var(--safe-b));
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:stretch}
+.deck .l{display:flex;gap:8px}
+.deck.one{grid-template-columns:minmax(0,1fr)}
+.sec{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);cursor:pointer;
+  min-width:62px;min-height:66px;padding:6px 9px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;line-height:1.15}
+.sec:hover:not(:disabled){background:var(--sunk)}
+.sec:disabled{opacity:.3;cursor:not-allowed}
+.sec .ic{font-size:17px;line-height:1}
+.sec .cap{font-size:11.5px;color:var(--dim)}
+.go{background:var(--work);border:0;border-radius:var(--r);color:var(--work-ink);cursor:pointer;
+  min-height:66px;padding:8px 16px;display:flex;flex-direction:column;justify-content:center;
+  gap:2px;text-align:left;width:100%}
+.go:hover:not(:disabled){filter:brightness(1.07)}
+.go:active:not(:disabled){filter:brightness(.92)}
+.go:disabled{opacity:.32;cursor:not-allowed}
+.go .k{font-size:11.5px;opacity:.85;text-transform:uppercase;letter-spacing:.05em}
+.go .v{font-weight:700;font-size:21px;line-height:1.1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.go .v .num{opacity:.6;margin-right:9px;font-family:var(--mono)}
+/* Crew read-out occupies the same slot as GO: same size, same place,
+   flat and unclickable, so nobody taps the show forward by accident. */
+.readout{background:var(--sunk);border-radius:var(--r);min-height:66px;padding:8px 16px;
+  display:flex;flex-direction:column;justify-content:center;gap:2px}
+.readout .k{font-size:11.5px;color:var(--work);text-transform:uppercase;letter-spacing:.05em}
+.readout .v{font-weight:700;font-size:21px;line-height:1.1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.readout .v .num{color:var(--dim);margin-right:9px;font-family:var(--mono)}
+.readout.away .k{color:var(--gel-congo)}
+
+/* ---------------- alert / toast / modal ---------------- */
+/* A call that did not reach the other devices is the worst thing that
+   can happen in a run. It stays until the SM retries or accepts it. */
+.alert{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:11px 13px;
+  background:var(--gel-rose);color:#12040A;font-size:13px;font-weight:600}
+.alert .msg{flex:1;min-width:170px}
+.alert button{background:#12040A;color:#fff;border:0;border-radius:var(--r-sm);
+  padding:9px 13px;font-size:12.5px;cursor:pointer;min-height:42px}
+.scrim{position:fixed;inset:0;background:rgba(4,6,10,.75);display:flex;
+  align-items:center;justify-content:center;padding:18px;z-index:70}
+.modal{background:var(--surface);border-radius:var(--r);max-width:440px;width:100%;
+  padding:20px;max-height:86vh;overflow:auto}
+.modal h3{font-weight:700;font-size:20px;line-height:1.15;margin-bottom:7px}
+.pick{display:flex;flex-direction:column;gap:8px;margin-top:15px}
+.pick button{text-align:left;padding:14px;background:var(--sunk);border:0;border-radius:var(--r);
+  cursor:pointer;display:flex;flex-direction:column;gap:3px;min-height:60px}
+.pick button:hover{background:var(--ground)}
+.pick button b{font-size:15px}
+.pick button span{font-size:12.5px;color:var(--dim)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;
+  background:var(--ink);color:var(--ground);padding:11px 15px;border-radius:var(--r-sm);
+  font-size:13px;z-index:80;max-width:88vw;text-align:center}
+.sect{padding:14px;border-bottom:1px solid var(--rule)}
+.sect:last-child{border-bottom:0}
+.sect > .tag{display:block;font-weight:700;color:var(--ink);margin-bottom:8px;
+  text-transform:uppercase;font-size:11.5px;letter-spacing:.05em}
+.plist{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.pitem{display:flex;gap:9px;align-items:center;padding:7px 0}
+.pitem .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.pitem .nm{flex:1;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------------------------------------------------------------
+   Wider screens. The sheet stops being an overlay and becomes a
+   pane, because an iPad has room to show the plan and the move
+   list at once and there is no reason to make the crew choose.
+   --------------------------------------------------------------- */
+@media(min-width:640px){
+  .stage{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+  .planwrap{position:relative;inset:auto;bottom:auto;min-height:0}
+  .sheet{position:relative;height:auto;min-height:0;border-radius:0;
+    max-height:44vh;transition:none}
+  .grab{cursor:default}
+  .grab::before{display:none}
+  .buildpane{position:relative}
+}
+@media(min-width:900px),(min-width:640px) and (max-height:560px){
+  .stage{grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:minmax(0,1fr)}
+  .sheet{max-height:none;border-top:0;border-left:1px solid var(--rule2)}
+  .buildpane{grid-column:1/-1}
+  /* The move list is hidden while building, so its column would sit
+     empty beside a squeezed plan. Give the plan the whole width. */
+  body.mode-build .stage{grid-template-columns:minmax(0,1fr)}
+  .go .v,.readout .v{font-size:23px}
+}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+/* ---------------------------------------------------------------
+   Backstage dimmer. A phone at full brightness in the wings spills
+   light into the house and kills night vision. Blackout also warms
+   the screen toward red, which the dark-adapted eye tolerates.
+   --------------------------------------------------------------- */
+#dim{position:fixed;inset:0;pointer-events:none;z-index:100;background:#000;opacity:0;
+  transition:opacity .35s}
+#dim.tint{background:#2E0A00}
+
+/* Paper backup. Wifi in a school theatre is not a plan. */
+.sheetprint{display:none}
+@media print{
+  html,body{height:auto;overflow:visible}
+  :root{--ground:#fff;--surface:#fff;--sunk:#fff;--ink:#000;--dim:#444;--rule:#bbb;--rule2:#777;--work:#000}
+  body{background:#fff;color:#000}
+  #root,#dim,.toast,.scrim{display:none !important}
+  .sheetprint{display:block !important;padding:0 6mm}
+  .sheetprint h1{font-size:24px;margin-bottom:2mm}
+  .sheetprint .meta{font-size:11px;color:#444;margin-bottom:5mm}
+  .sheetprint .blk{break-inside:avoid;page-break-inside:avoid;border-top:1px solid #bbb;padding:3mm 0}
+  .sheetprint .hd2{display:flex;gap:8px;align-items:baseline}
+  .sheetprint .no{font-size:19px;min-width:9mm;font-weight:700}
+  .sheetprint .nmx{font-size:16px;font-weight:600}
+  .sheetprint .cur{font-size:11px;border:1px solid #777;padding:0 5px;margin-left:auto}
+  .sheetprint .nt{font-size:11.5px;color:#333;margin:1mm 0 2mm}
+  .sheetprint ol{margin:0;padding-left:6mm;font-size:12px}
+  .sheetprint li{margin-bottom:1mm}
+  .sheetprint .none{font-size:11.5px;color:#555;font-style:italic}
+}

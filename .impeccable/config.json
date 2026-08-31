@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/style.css"
+        ],
+        "createdAt": "2026-08-31T00:25:40.407Z",
+        "reason": "User confirmed: the sheet animates --pane, which the plan box reads too (.planwrap bottom). Sheet growth and map shrink are the same number, so transform is not a substitute. Transition is disabled during drag; contain:layout scopes the relayout."
+      }
+    ]
+  }
+}

@@ -31,6 +31,6 @@ jobs:
       # calls, the print sheet, and the self-rebuild round trip.
       - run: npm test
 
-      # index.html is generated from ghost-light.html; fail if someone
-      # edited the source without regenerating the Pages entry point.
+      # ghost-light.html and index.html are both generated from src/; fail
+      # if someone edited the source without regenerating them.
       - run: npm run check:pages
