@@ -301,7 +301,13 @@ label.f.size > span{white-space:nowrap}
   padding:9px 10px calc(9px + var(--safe-b));
   display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:stretch}
 .deck .l{display:flex;gap:8px}
-.deck.one{grid-template-columns:minmax(0,1fr)}
+/* Build mode gets one target and it is not called under pressure, so
+   it does not need the full height the run deck does — that size is
+   for a thumb finding GO in the dark, mid-show. */
+.deck.one{grid-template-columns:minmax(0,1fr);padding:7px 10px calc(7px + var(--safe-b))}
+.deck.one .go{min-height:48px;padding:6px 14px}
+.deck.one .go .v{font-size:17px}
+.deck.one .go .k{font-size:11px}
 .sec{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r);cursor:pointer;
   min-width:62px;min-height:66px;padding:6px 9px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:3px;line-height:1.15}

@@ -86,7 +86,9 @@ The command deck is pinned to the bottom edge deliberately:
 - It **never moves or changes meaning**, including while looking ahead at another
   scene, so the thumb learns one location. Jumping the show to the scene you are
   looking at is a separate, explicitly labelled control in the sheet header.
-- Only two controls are reachable during a run.
+- Only two controls are reachable during a run. Build mode's single **Save & sync**
+  target is deliberately smaller: that height is for a thumb finding GO in the dark
+  mid-show, and nothing in build mode is called under pressure.
 - Crew get the same block in the same place, but flat and unclickable. While they are
   on the live scene it names **what is coming**, because the sheet directly above
   already names what is on — and repeating it would waste the biggest readable thing
@@ -104,9 +106,10 @@ top, the plan fills the middle, and the set pieces run along the bottom.
 - The scene's **name, curtains and note** sit directly under the plan, because those
   are what a stage manager changes on nearly every pass. Reorder and delete — rarer,
   and riskier — stay one tap further in.
-- That row **folds away** behind one chevron at its right edge, and stays folded until
-  you open it again. Nothing is lost while it is shut: the scene chips above still name
-  the scene you are on, and the map takes the room back.
+- That row and the piece tray **fold away together** behind one chevron at the row's
+  right edge, and stay folded until you open them again. Nothing is lost while they are
+  shut: the scene chips above still name the scene you are on, and the map takes the
+  whole bottom of the screen back.
 - Tap a piece to select it. Two small handles appear beside it: one **turns** it, one
   opens its **menu** — zone shortcuts, crew note, size, angle, and what to do with it
   this scene. Selecting costs the map nothing; the menu is a sheet you ask for.
