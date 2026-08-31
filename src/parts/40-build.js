@@ -79,32 +79,51 @@ function moveScene(dir){
    them behind a modal was most of what made building feel like work.
    The chip's own sheet keeps the rarer, riskier ones — reorder and
    delete. */
+/* Folded away, it is a single chevron and the map takes the room back.
+   Nothing is lost while it is shut: the scene chips above still name
+   the scene you are on. Remembered per device, because someone who
+   wants it out of the way wants it out of the way tomorrow too. */
+var stripOpen = LS.get("strip", true);
+
 function paintSceneStrip(){
   var strip = $("scenestrip");
   if(mode !== "build"){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
+  strip.classList.toggle("shut", !stripOpen);
   if(!sc) return;
 
-  var nm = document.createElement("input");
-  nm.type = "text"; nm.value = sc.name; nm.placeholder = "Name this scene";
-  nm.setAttribute("aria-label", "Scene name");
-  nm.addEventListener("input", function(){
-    sc.name = nm.value; markDirty(); paintSceneBar(); paintDeck();
+  if(stripOpen){
+    var nm = document.createElement("input");
+    nm.type = "text"; nm.value = sc.name; nm.placeholder = "Name this scene";
+    nm.setAttribute("aria-label", "Scene name");
+    nm.addEventListener("input", function(){
+      sc.name = nm.value; markDirty(); paintSceneBar(); paintDeck();
+    });
+    strip.appendChild(nm);
+
+    strip.appendChild(curtainSeg(sc));
+
+    var note = document.createElement("input");
+    note.type = "text"; note.className = "note";
+    note.value = sc.note || "";
+    note.placeholder = "What the crew needs to know for this scene";
+    note.setAttribute("aria-label", "Scene note");
+    note.addEventListener("input", function(){ sc.note = note.value; markDirty(); });
+    strip.appendChild(note);
+    /* Reorder and delete are rarer and riskier, so they stay one tap in. */
+    strip.appendChild(mkbtn("More…", "btn sm", sceneSheet));
+  }
+
+  var fold = mkbtn(stripOpen ? "▴" : "▾", "btn sm fold", function(){
+    stripOpen = !stripOpen;
+    LS.set("strip", stripOpen);
+    render();
   });
-  strip.appendChild(nm);
-
-  strip.appendChild(curtainSeg(sc));
-
-  var note = document.createElement("input");
-  note.type = "text"; note.className = "note";
-  note.value = sc.note || "";
-  note.placeholder = "What the crew needs to know for this scene";
-  note.setAttribute("aria-label", "Scene note");
-  note.addEventListener("input", function(){ sc.note = note.value; markDirty(); });
-  strip.appendChild(note);
-  /* Reorder and delete are rarer and riskier, so they stay one tap in. */
-  strip.appendChild(mkbtn("More…", "btn sm", sceneSheet));
+  fold.title = stripOpen ? "Hide the scene row" : "Show the scene row";
+  fold.setAttribute("aria-label", fold.title);
+  fold.setAttribute("aria-expanded", stripOpen ? "true" : "false");
+  strip.appendChild(fold);
 }
 
 /* One control for all three line sets. Each button says which curtain

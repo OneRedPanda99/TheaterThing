@@ -101,9 +101,12 @@ A separate screen, not a mode bleeding through the run screen. Scenes run along 
 top, the plan fills the middle, and the set pieces run along the bottom.
 
 - Tap a scene chip to go to it; tap the one you are already on for its details.
-- The scene's **name, curtain and note** sit directly under the plan, because those are
-  what a stage manager changes on nearly every pass. Reorder and delete — rarer, and
-  riskier — stay one tap further in.
+- The scene's **name, curtains and note** sit directly under the plan, because those
+  are what a stage manager changes on nearly every pass. Reorder and delete — rarer,
+  and riskier — stay one tap further in.
+- That row **folds away** behind one chevron at its right edge, and stays folded until
+  you open it again. Nothing is lost while it is shut: the scene chips above still name
+  the scene you are on, and the map takes the room back.
 - Tap a piece to select it. Two small handles appear beside it: one **turns** it, one
   opens its **menu** — zone shortcuts, crew note, size, angle, and what to do with it
   this scene. Selecting costs the map nothing; the menu is a sheet you ask for.
@@ -192,7 +195,7 @@ npm ci
 npm test
 ```
 
-58 checks covering route derivation, move-list generation, the command deck's positional
+59 checks covering route derivation, move-list generation, the command deck's positional
 guarantees, build mode, feet parsing, free rotation and its snap, the three curtains,
 backstage modes, failed-call handling, the print sheet, and the self-rebuild round trip.
 
