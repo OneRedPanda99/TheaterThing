@@ -130,7 +130,7 @@
     {
       "id": "s2",
       "name": "1-1 Kitchen",
-      "note": "Curtain out. Table and both chairs live centre; sofa comes on stage right.",
+      "note": "Curtain open. Table and both chairs live centre; sofa comes on stage right.",
       "curtain": "open",
       "place": {
         "p6": {
@@ -258,7 +258,7 @@
     {
       "id": "s4",
       "name": "Intermission",
-      "note": "Curtain in. Full reset for act 2 — 12 minutes. Door unit onto the wagon.",
+      "note": "Curtain closed. Full reset for act 2 — 12 minutes. Door unit onto the wagon.",
       "curtain": "closed",
       "place": {
         "p6": {
@@ -322,7 +322,7 @@
     {
       "id": "s5",
       "name": "2-1 Parlor",
-      "note": "Curtain out on the top of act 2. Sofa and both chairs, door unit stays on the wagon.",
+      "note": "Curtain open on the top of act 2. Sofa and both chairs, door unit stays on the wagon.",
       "curtain": "open",
       "place": {
         "p6": {

@@ -16,7 +16,7 @@ function render(){
   paintDeck();
   drawPieces(sc);
   drawRoutes(moves);
-  setCurtain(sc ? sc.curtain === "open" : true, false);
+  setCurtains(sc, false);
   paintPop();
   applyPanes();
 }
@@ -104,6 +104,9 @@ window.GL = {
   toFeet: toFeet,
   toUnits: toUnits,
   angleTo: angleTo,
+  curtainSummary: curtainSummary,
+  CURTAINS: CURTAINS,
+  movesBetween: movesBetween,
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,

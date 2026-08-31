@@ -19,6 +19,35 @@ var ZONES = {
 var ORDER = { aux:0, wingSR:1, stage:2, wingSL:3 };
 var SIDE  = { aux:"R", wingSR:"R", stage:"C", wingSL:"L" };
 var CROSS_Y = 50, CURTAIN_Y = 542;
+
+/* ---------------- the line sets ----------------
+   Three of them, called by name. Open always means the audience can
+   see the stage; closed means they cannot. The main curtain hangs at
+   the proscenium, the mid curtain splits the stage for a shallow
+   scene, and the scrim sits upstage of both.
+
+   The main one is stored as `curtain` because that is what shows built
+   before the other two called it, and renaming it would strand them. */
+var CURTAINS = [
+  { key:"curtain", name:"Main curtain", short:"MAIN",  y:542, cls:"main",  color:"var(--gel-rose)" },
+  { key:"mid",     name:"Mid curtain",  short:"MID",   y:330, cls:"mid",   color:"var(--gel-congo)" },
+  /* cls is "sheer", not "scrim": .scrim is the modal backdrop, and a
+     curtain sharing it means querySelector(".scrim") finds a rect on
+     the plan — which the Escape handler then deletes. */
+  { key:"scrim",   name:"Scrim",        short:"SCRIM", y:170, cls:"sheer", color:"var(--gel-green)" }
+];
+/* Anything not explicitly closed is open — a theatre with no mid
+   curtain simply never closes one, and nothing is ever called for it. */
+function curtainAt(sc, key){ return (sc && sc[key] === "closed") ? "closed" : "open"; }
+function curtainSummary(sc){
+  var shut = CURTAINS.filter(function(c){ return curtainAt(sc, c.key) === "closed"; });
+  if(!shut.length) return "Everything open";
+  if(shut.length === CURTAINS.length) return "Everything closed";
+  var names = shut.map(function(c){ return c.short.toLowerCase(); });
+  var last = names.pop();
+  var text = (names.length ? names.join(", ") + " and " + last : last) + " closed";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 var COLS = ["R","C","L"], ROWS = ["US","MS","DS"];
 var PALETTE = ["#C1683B","#4E8C6A","#6D7BC4","#9C5AA8","#B0913F","#3F8AA0","#B8474C","#7E6BB5"];
 
@@ -132,11 +161,14 @@ function turnText(a, b){
 function movesBetween(prev, next){
   if(!next || !prev) return [];
   var out = [];
-  if(prev.curtain !== next.curtain){
-    out.push({ kind:"curtain",
-               text: next.curtain === "open" ? "Curtain out" : "Curtain in",
-               sub:  next.curtain === "open" ? "open before the scene" : "close on the scene" });
-  }
+  CURTAINS.forEach(function(c){
+    var was = curtainAt(prev, c.key), now = curtainAt(next, c.key);
+    if(was === now) return;
+    out.push({ kind:"curtain", cur:c,
+               verb: now === "open" ? "Open" : "Close",
+               text: c.name,
+               sub:  now === "open" ? "before the scene starts" : "on the end of the scene" });
+  });
   var seen = {};
   Object.keys(next.place).concat(Object.keys(prev.place)).forEach(function(id){
     if(seen[id]) return; seen[id] = 1;

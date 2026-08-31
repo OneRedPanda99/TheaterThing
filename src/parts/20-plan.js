@@ -13,7 +13,8 @@
 
 var svgNS = "http://www.w3.org/2000/svg";
 var plansvg = $("plansvg");
-var svg = null, pieceLayer = null, routeLayer = null, curtainL = null, curtainR = null;
+var svg = null, pieceLayer = null, routeLayer = null;
+var curtains = {};          // curtain key -> { L, R } panel pair
 var labels = [];            // { node, px, y, em } — see label() / sizeLabels()
 var nodes = {};             // piece id -> <g>
 
@@ -86,9 +87,20 @@ function buildPlan(){
   routeLayer = el("g", {}, svg);
   pieceLayer = el("g", {}, svg);
 
-  el("line", { x1:st.x-8, y1:CURTAIN_Y, x2:st.x+st.w+8, y2:CURTAIN_Y, class:"curtain-rod" }, svg);
-  curtainL = el("rect", { x:st.x, y:CURTAIN_Y-5, width:st.w/2, height:10, class:"curtain" }, svg);
-  curtainR = el("rect", { x:st.x+st.w/2, y:CURTAIN_Y-5, width:st.w/2, height:10, class:"curtain" }, svg);
+  /* All three line sets, each on its own rod, each named at the stage
+     left end so the crew can tell which one is being called. */
+  curtains = {};
+  CURTAINS.forEach(function(c){
+    el("line", { x1:st.x-8, y1:c.y, x2:st.x+st.w+8, y2:c.y, class:"curtain-rod" }, svg);
+    curtains[c.key] = {
+      L: el("rect", { x:st.x, y:c.y-5, width:st.w/2, height:10,
+                      class:"curtain " + c.cls }, svg),
+      R: el("rect", { x:st.x+st.w/2, y:c.y-5, width:st.w/2, height:10,
+                      class:"curtain " + c.cls }, svg)
+    };
+    label(el("text", { x:st.x+st.w-8, y:c.y-7, "text-anchor":"end", class:"grid-tag" }, svg), 9)
+      .textContent = c.short;
+  });
 
   el("rect", { x:st.x, y:CURTAIN_Y+26, width:st.w, height:62, rx:14, class:"house" }, svg);
   label(el("text", { x:st.x+st.w/2, y:CURTAIN_Y+61, "text-anchor":"middle", class:"house-tag" }, svg), 11)
@@ -105,15 +117,17 @@ function buildPlan(){
   applyView();
 }
 
-function setCurtain(open, animate){
-  if(!curtainL) return;
+function setCurtains(scene, animate){
   var st = ZONES.stage, half = st.w/2;
-  var w = open ? half*0.12 : half;
-  curtainL.style.transition = animate ? "width .55s ease" : "none";
-  curtainR.style.transition = animate ? "width .55s ease, x .55s ease" : "none";
-  curtainL.setAttribute("width", w);
-  curtainR.setAttribute("width", w);
-  curtainR.setAttribute("x", st.x + st.w - w);
+  CURTAINS.forEach(function(c){
+    var pair = curtains[c.key]; if(!pair) return;
+    var w = curtainAt(scene, c.key) === "open" ? half*0.12 : half;
+    pair.L.style.transition = animate ? "width .55s ease" : "none";
+    pair.R.style.transition = animate ? "width .55s ease, x .55s ease" : "none";
+    pair.L.setAttribute("width", w);
+    pair.R.setAttribute("width", w);
+    pair.R.setAttribute("x", st.x + st.w - w);
+  });
 }
 
 /* Plan units per CSS pixel at the current zoom. */
@@ -236,7 +250,7 @@ function animateTransition(fromScene, toScene){
   var moves = movesBetween(fromScene, toScene);
   drawRoutes(moves);
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(!fromScene || reduce){ setCurtain(toScene.curtain === "open", false); return; }
+  if(!fromScene || reduce){ setCurtains(toScene, false); return; }
 
   var capFS = Math.max(9, 11.5 * planScale());
   var tracks = [];
@@ -258,10 +272,8 @@ function animateTransition(fromScene, toScene){
                   w:m.piece.w, h:m.piece.h });
   });
   if(!tracks.length){
-    setCurtain(fromScene.curtain === "open", false);
-    requestAnimationFrame(function(){
-      setCurtain(toScene.curtain === "open", fromScene.curtain !== toScene.curtain);
-    });
+    setCurtains(fromScene, false);
+    requestAnimationFrame(function(){ setCurtains(toScene, true); });
     return;
   }
   var DUR = 1500, t0 = null;
@@ -289,9 +301,9 @@ function animateTransition(fromScene, toScene){
   tracks.forEach(function(tr){
     setPieceTransform(tr.g, tr.segs[0].a.x, tr.segs[0].a.y, tr.r0, tr.w, tr.h, capFS);
   });
-  setCurtain(fromScene.curtain === "open", false);
+  setCurtains(fromScene, false);
   requestAnimationFrame(function(){
-    if(fromScene.curtain !== toScene.curtain) setCurtain(toScene.curtain === "open", true);
+    setCurtains(toScene, true);
     animRAF = requestAnimationFrame(step);
   });
 }
@@ -428,9 +440,14 @@ function onPointerDown(evt){
   var sc = sceneAt(viewIdx), pl = sc && sc.place[id];
   var c = pl ? abs(pl) : null;
   var pc = pieceById(id);
-  drag = onSpin
-    ? { id:id, mode:"spin", c:c, w:(pc?pc.w:0), h:(pc?pc.h:0), capFS:Math.max(9, 11.5*planScale()) }
-    : { id:id, mode:"move", ox: c ? c.x - p.x : 0, oy: c ? c.y - p.y : 0 };
+  /* Both gestures carry the piece's size and angle, because dragging
+     rewrites the whole transform every frame and anything left out of
+     it is lost for the length of the drag. */
+  drag = { id:id, mode: onSpin ? "spin" : "move", c:c,
+           r: (pl && pl.r) || 0,
+           w: pc ? pc.w : 0, h: pc ? pc.h : 0,
+           capFS: Math.max(9, 11.5 * planScale()),
+           ox: c ? c.x - p.x : 0, oy: c ? c.y - p.y : 0 };
 
   if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
   if(!wasSelected) render();                  // first tap selects and draws the handle
@@ -482,7 +499,8 @@ function onPointerMove(evt){
     setPieceTransform(drag.g, drag.c.x, drag.c.y, pl.r, drag.w, drag.h, drag.capFS);
     return;
   }
-  drag.g.setAttribute("transform", xform(p.x + drag.ox, p.y + drag.oy, 0));
+  setPieceTransform(drag.g, p.x + drag.ox, p.y + drag.oy, drag.r,
+                    drag.w, drag.h, drag.capFS);
 }
 
 /* The handle stands straight up from the piece, so the angle from the

@@ -164,7 +164,12 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none}
 .plan-note{font-family:var(--ui);fill:var(--dim);opacity:.75}
 .house{fill:none;stroke:var(--rule2);stroke-width:1;stroke-dasharray:2 7}
 .house-tag{font-family:var(--ui);font-weight:700;letter-spacing:.05em;fill:var(--dim);opacity:.7}
-.curtain{fill:var(--gel-rose);opacity:.8}
+/* Three line sets, told apart by colour. The scrim is drawn faint
+   because you can see through it. */
+.curtain{opacity:.8}
+.curtain.main{fill:var(--gel-rose)}
+.curtain.mid{fill:var(--gel-congo)}
+.curtain.sheer{fill:var(--gel-green);opacity:.4}
 .curtain-rod{stroke:var(--rule2);stroke-width:1.5;opacity:.6}
 .route{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:7 5;opacity:.9}
 .route.dim{stroke:var(--dim);opacity:.22}
@@ -256,7 +261,13 @@ body.mode-build .pc{cursor:grab}
 .scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
   padding:9px 10px;border-bottom:1px solid var(--rule)}
 .scenestrip input{flex:1 1 150px;padding:8px 10px}
-.scenestrip .seg button{min-height:40px;padding:8px 12px;font-size:13px}
+.scenestrip .seg button{min-height:40px;padding:6px 10px;font-size:13px}
+/* Name over state, so one button says both which curtain and how it
+   is set without needing a legend. */
+.seg.curtains button{display:flex;flex-direction:column;gap:1px;line-height:1.15;padding:6px 10px}
+.seg.curtains .cn{font-size:11px;letter-spacing:.05em;opacity:.75}
+.seg.curtains .cs{font-size:13px;font-weight:700}
+.seg.curtains button.on .cn{opacity:.85}
 .scenestrip .btn{min-height:40px}
 .scenestrip .note{flex:1 1 190px}
 .tray{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;
@@ -463,7 +474,7 @@ label.f.size > span{white-space:nowrap}
 <div class="sheetprint" id="runsheet"></div>
 <div id="dim"></div>
 
-<script id="state" type="application/json">{"rev":6,"show":"Spring Production","stageFeet":40,"liveIndex":3,"liveStamp":1787933485486,"pieces":[{"id":"p1","name":"Sofa","w":118,"h":50,"color":"#C1683B"},{"id":"p2","name":"Kitchen table","w":86,"h":62,"color":"#4E8C6A"},{"id":"p3","name":"Chair A","w":34,"h":34,"color":"#6D7BC4"},{"id":"p4","name":"Chair B","w":34,"h":34,"color":"#6D7BC4"},{"id":"p5","name":"Door unit","w":74,"h":26,"color":"#9C5AA8"},{"id":"p6","name":"Platform wagon","w":150,"h":92,"color":"#B0913F"},{"id":"p7","name":"Bench","w":98,"h":32,"color":"#3F8AA0"},{"id":"p8","name":"Lamppost","w":26,"h":26,"color":"#B8474C"}],"scenes":[{"id":"s1","name":"Preshow","note":"House open. Nothing onstage but the wagon, parked upstage centre. Everything else preset in the wings.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.34,"r":0,"note":"Against back wall, upstage of leg 2"},"p2":{"zone":"wingSR","x":0.5,"y":0.62,"r":0,"note":"Downstage of leg 3, chairs stacked on top"},"p3":{"zone":"wingSR","x":0.28,"y":0.78,"r":0,"note":""},"p4":{"zone":"wingSR","x":0.66,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s2","name":"1-1 Kitchen","note":"Curtain out. Table and both chairs live centre; sofa comes on stage right.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"stage","x":0.48,"y":0.55,"r":0,"note":""},"p3":{"zone":"stage","x":0.34,"y":0.55,"r":0,"note":""},"p4":{"zone":"stage","x":0.62,"y":0.55,"r":0,"note":""},"p1":{"zone":"stage","x":0.2,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s3","name":"1-2 Street","note":"Blackout change, 40 seconds. Kitchen strikes to wing SR, bench and lamppost come on. Door unit travels aux to wing SR first — do that during 1-1.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p7":{"zone":"stage","x":0.58,"y":0.7,"r":0,"note":""},"p8":{"zone":"stage","x":0.24,"y":0.62,"r":0,"note":""},"p5":{"zone":"wingSR","x":0.5,"y":0.5,"r":0,"note":"Staged for act 2, downstage of leg 2"},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s4","name":"Intermission","note":"Curtain in. Full reset for act 2 — 12 minutes. Door unit onto the wagon.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s5","name":"2-1 Parlor","note":"Curtain out on the top of act 2. Sofa and both chairs, door unit stays on the wagon.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p1":{"zone":"stage","x":0.44,"y":0.66,"r":0,"note":""},"p3":{"zone":"stage","x":0.2,"y":0.6,"r":0,"note":""},"p4":{"zone":"stage","x":0.72,"y":0.62,"r":0,"note":""},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""}}}],"demo":true}</script>
+<script id="state" type="application/json">{"rev":6,"show":"Spring Production","stageFeet":40,"liveIndex":3,"liveStamp":1787933485486,"pieces":[{"id":"p1","name":"Sofa","w":118,"h":50,"color":"#C1683B"},{"id":"p2","name":"Kitchen table","w":86,"h":62,"color":"#4E8C6A"},{"id":"p3","name":"Chair A","w":34,"h":34,"color":"#6D7BC4"},{"id":"p4","name":"Chair B","w":34,"h":34,"color":"#6D7BC4"},{"id":"p5","name":"Door unit","w":74,"h":26,"color":"#9C5AA8"},{"id":"p6","name":"Platform wagon","w":150,"h":92,"color":"#B0913F"},{"id":"p7","name":"Bench","w":98,"h":32,"color":"#3F8AA0"},{"id":"p8","name":"Lamppost","w":26,"h":26,"color":"#B8474C"}],"scenes":[{"id":"s1","name":"Preshow","note":"House open. Nothing onstage but the wagon, parked upstage centre. Everything else preset in the wings.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.34,"r":0,"note":"Against back wall, upstage of leg 2"},"p2":{"zone":"wingSR","x":0.5,"y":0.62,"r":0,"note":"Downstage of leg 3, chairs stacked on top"},"p3":{"zone":"wingSR","x":0.28,"y":0.78,"r":0,"note":""},"p4":{"zone":"wingSR","x":0.66,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s2","name":"1-1 Kitchen","note":"Curtain open. Table and both chairs live centre; sofa comes on stage right.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"stage","x":0.48,"y":0.55,"r":0,"note":""},"p3":{"zone":"stage","x":0.34,"y":0.55,"r":0,"note":""},"p4":{"zone":"stage","x":0.62,"y":0.55,"r":0,"note":""},"p1":{"zone":"stage","x":0.2,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s3","name":"1-2 Street","note":"Blackout change, 40 seconds. Kitchen strikes to wing SR, bench and lamppost come on. Door unit travels aux to wing SR first — do that during 1-1.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p7":{"zone":"stage","x":0.58,"y":0.7,"r":0,"note":""},"p8":{"zone":"stage","x":0.24,"y":0.62,"r":0,"note":""},"p5":{"zone":"wingSR","x":0.5,"y":0.5,"r":0,"note":"Staged for act 2, downstage of leg 2"},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s4","name":"Intermission","note":"Curtain closed. Full reset for act 2 — 12 minutes. Door unit onto the wagon.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s5","name":"2-1 Parlor","note":"Curtain open on the top of act 2. Sofa and both chairs, door unit stays on the wagon.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p1":{"zone":"stage","x":0.44,"y":0.66,"r":0,"note":""},"p3":{"zone":"stage","x":0.2,"y":0.6,"r":0,"note":""},"p4":{"zone":"stage","x":0.72,"y":0.62,"r":0,"note":""},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""}}}],"demo":true}</script>
 
 <script id="app">
 (function(){
@@ -587,6 +598,35 @@ var ZONES = {
 var ORDER = { aux:0, wingSR:1, stage:2, wingSL:3 };
 var SIDE  = { aux:"R", wingSR:"R", stage:"C", wingSL:"L" };
 var CROSS_Y = 50, CURTAIN_Y = 542;
+
+/* ---------------- the line sets ----------------
+   Three of them, called by name. Open always means the audience can
+   see the stage; closed means they cannot. The main curtain hangs at
+   the proscenium, the mid curtain splits the stage for a shallow
+   scene, and the scrim sits upstage of both.
+
+   The main one is stored as `curtain` because that is what shows built
+   before the other two called it, and renaming it would strand them. */
+var CURTAINS = [
+  { key:"curtain", name:"Main curtain", short:"MAIN",  y:542, cls:"main",  color:"var(--gel-rose)" },
+  { key:"mid",     name:"Mid curtain",  short:"MID",   y:330, cls:"mid",   color:"var(--gel-congo)" },
+  /* cls is "sheer", not "scrim": .scrim is the modal backdrop, and a
+     curtain sharing it means querySelector(".scrim") finds a rect on
+     the plan — which the Escape handler then deletes. */
+  { key:"scrim",   name:"Scrim",        short:"SCRIM", y:170, cls:"sheer", color:"var(--gel-green)" }
+];
+/* Anything not explicitly closed is open — a theatre with no mid
+   curtain simply never closes one, and nothing is ever called for it. */
+function curtainAt(sc, key){ return (sc && sc[key] === "closed") ? "closed" : "open"; }
+function curtainSummary(sc){
+  var shut = CURTAINS.filter(function(c){ return curtainAt(sc, c.key) === "closed"; });
+  if(!shut.length) return "Everything open";
+  if(shut.length === CURTAINS.length) return "Everything closed";
+  var names = shut.map(function(c){ return c.short.toLowerCase(); });
+  var last = names.pop();
+  var text = (names.length ? names.join(", ") + " and " + last : last) + " closed";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
 var COLS = ["R","C","L"], ROWS = ["US","MS","DS"];
 var PALETTE = ["#C1683B","#4E8C6A","#6D7BC4","#9C5AA8","#B0913F","#3F8AA0","#B8474C","#7E6BB5"];
 
@@ -700,11 +740,14 @@ function turnText(a, b){
 function movesBetween(prev, next){
   if(!next || !prev) return [];
   var out = [];
-  if(prev.curtain !== next.curtain){
-    out.push({ kind:"curtain",
-               text: next.curtain === "open" ? "Curtain out" : "Curtain in",
-               sub:  next.curtain === "open" ? "open before the scene" : "close on the scene" });
-  }
+  CURTAINS.forEach(function(c){
+    var was = curtainAt(prev, c.key), now = curtainAt(next, c.key);
+    if(was === now) return;
+    out.push({ kind:"curtain", cur:c,
+               verb: now === "open" ? "Open" : "Close",
+               text: c.name,
+               sub:  now === "open" ? "before the scene starts" : "on the end of the scene" });
+  });
   var seen = {};
   Object.keys(next.place).concat(Object.keys(prev.place)).forEach(function(id){
     if(seen[id]) return; seen[id] = 1;
@@ -745,7 +788,8 @@ function movesInto(i){ return movesBetween(sceneAt(i-1), sceneAt(i)); }
 
 var svgNS = "http://www.w3.org/2000/svg";
 var plansvg = $("plansvg");
-var svg = null, pieceLayer = null, routeLayer = null, curtainL = null, curtainR = null;
+var svg = null, pieceLayer = null, routeLayer = null;
+var curtains = {};          // curtain key -> { L, R } panel pair
 var labels = [];            // { node, px, y, em } — see label() / sizeLabels()
 var nodes = {};             // piece id -> <g>
 
@@ -818,9 +862,20 @@ function buildPlan(){
   routeLayer = el("g", {}, svg);
   pieceLayer = el("g", {}, svg);
 
-  el("line", { x1:st.x-8, y1:CURTAIN_Y, x2:st.x+st.w+8, y2:CURTAIN_Y, class:"curtain-rod" }, svg);
-  curtainL = el("rect", { x:st.x, y:CURTAIN_Y-5, width:st.w/2, height:10, class:"curtain" }, svg);
-  curtainR = el("rect", { x:st.x+st.w/2, y:CURTAIN_Y-5, width:st.w/2, height:10, class:"curtain" }, svg);
+  /* All three line sets, each on its own rod, each named at the stage
+     left end so the crew can tell which one is being called. */
+  curtains = {};
+  CURTAINS.forEach(function(c){
+    el("line", { x1:st.x-8, y1:c.y, x2:st.x+st.w+8, y2:c.y, class:"curtain-rod" }, svg);
+    curtains[c.key] = {
+      L: el("rect", { x:st.x, y:c.y-5, width:st.w/2, height:10,
+                      class:"curtain " + c.cls }, svg),
+      R: el("rect", { x:st.x+st.w/2, y:c.y-5, width:st.w/2, height:10,
+                      class:"curtain " + c.cls }, svg)
+    };
+    label(el("text", { x:st.x+st.w-8, y:c.y-7, "text-anchor":"end", class:"grid-tag" }, svg), 9)
+      .textContent = c.short;
+  });
 
   el("rect", { x:st.x, y:CURTAIN_Y+26, width:st.w, height:62, rx:14, class:"house" }, svg);
   label(el("text", { x:st.x+st.w/2, y:CURTAIN_Y+61, "text-anchor":"middle", class:"house-tag" }, svg), 11)
@@ -837,15 +892,17 @@ function buildPlan(){
   applyView();
 }
 
-function setCurtain(open, animate){
-  if(!curtainL) return;
+function setCurtains(scene, animate){
   var st = ZONES.stage, half = st.w/2;
-  var w = open ? half*0.12 : half;
-  curtainL.style.transition = animate ? "width .55s ease" : "none";
-  curtainR.style.transition = animate ? "width .55s ease, x .55s ease" : "none";
-  curtainL.setAttribute("width", w);
-  curtainR.setAttribute("width", w);
-  curtainR.setAttribute("x", st.x + st.w - w);
+  CURTAINS.forEach(function(c){
+    var pair = curtains[c.key]; if(!pair) return;
+    var w = curtainAt(scene, c.key) === "open" ? half*0.12 : half;
+    pair.L.style.transition = animate ? "width .55s ease" : "none";
+    pair.R.style.transition = animate ? "width .55s ease, x .55s ease" : "none";
+    pair.L.setAttribute("width", w);
+    pair.R.setAttribute("width", w);
+    pair.R.setAttribute("x", st.x + st.w - w);
+  });
 }
 
 /* Plan units per CSS pixel at the current zoom. */
@@ -968,7 +1025,7 @@ function animateTransition(fromScene, toScene){
   var moves = movesBetween(fromScene, toScene);
   drawRoutes(moves);
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(!fromScene || reduce){ setCurtain(toScene.curtain === "open", false); return; }
+  if(!fromScene || reduce){ setCurtains(toScene, false); return; }
 
   var capFS = Math.max(9, 11.5 * planScale());
   var tracks = [];
@@ -990,10 +1047,8 @@ function animateTransition(fromScene, toScene){
                   w:m.piece.w, h:m.piece.h });
   });
   if(!tracks.length){
-    setCurtain(fromScene.curtain === "open", false);
-    requestAnimationFrame(function(){
-      setCurtain(toScene.curtain === "open", fromScene.curtain !== toScene.curtain);
-    });
+    setCurtains(fromScene, false);
+    requestAnimationFrame(function(){ setCurtains(toScene, true); });
     return;
   }
   var DUR = 1500, t0 = null;
@@ -1021,9 +1076,9 @@ function animateTransition(fromScene, toScene){
   tracks.forEach(function(tr){
     setPieceTransform(tr.g, tr.segs[0].a.x, tr.segs[0].a.y, tr.r0, tr.w, tr.h, capFS);
   });
-  setCurtain(fromScene.curtain === "open", false);
+  setCurtains(fromScene, false);
   requestAnimationFrame(function(){
-    if(fromScene.curtain !== toScene.curtain) setCurtain(toScene.curtain === "open", true);
+    setCurtains(toScene, true);
     animRAF = requestAnimationFrame(step);
   });
 }
@@ -1160,9 +1215,14 @@ function onPointerDown(evt){
   var sc = sceneAt(viewIdx), pl = sc && sc.place[id];
   var c = pl ? abs(pl) : null;
   var pc = pieceById(id);
-  drag = onSpin
-    ? { id:id, mode:"spin", c:c, w:(pc?pc.w:0), h:(pc?pc.h:0), capFS:Math.max(9, 11.5*planScale()) }
-    : { id:id, mode:"move", ox: c ? c.x - p.x : 0, oy: c ? c.y - p.y : 0 };
+  /* Both gestures carry the piece's size and angle, because dragging
+     rewrites the whole transform every frame and anything left out of
+     it is lost for the length of the drag. */
+  drag = { id:id, mode: onSpin ? "spin" : "move", c:c,
+           r: (pl && pl.r) || 0,
+           w: pc ? pc.w : 0, h: pc ? pc.h : 0,
+           capFS: Math.max(9, 11.5 * planScale()),
+           ox: c ? c.x - p.x : 0, oy: c ? c.y - p.y : 0 };
 
   if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
   if(!wasSelected) render();                  // first tap selects and draws the handle
@@ -1214,7 +1274,8 @@ function onPointerMove(evt){
     setPieceTransform(drag.g, drag.c.x, drag.c.y, pl.r, drag.w, drag.h, drag.capFS);
     return;
   }
-  drag.g.setAttribute("transform", xform(p.x + drag.ox, p.y + drag.oy, 0));
+  setPieceTransform(drag.g, p.x + drag.ox, p.y + drag.oy, drag.r,
+                    drag.w, drag.h, drag.capFS);
 }
 
 /* The handle stands straight up from the piece, so the angle from the
@@ -1424,9 +1485,9 @@ function paintMoves(moves){
     var sw = ele("div", "sw");
     var tx = ele("div", "txt");
     if(m.kind === "curtain"){
-      sw.style.background = "var(--gel-rose)";
+      sw.style.background = m.cur.color;
       var cn = ele("div", "nm");
-      cn.appendChild(ele("span", "verb", "Curtain"));
+      cn.appendChild(ele("span", "verb", m.verb));
       cn.appendChild(document.createTextNode(m.text));
       tx.appendChild(cn);
       tx.appendChild(ele("div", "path", m.sub));
@@ -1468,7 +1529,7 @@ function paintNote(){
   var sc = sceneAt(viewIdx), box = $("notebox");
   if(!sc || !sc.note){ box.classList.add("hide"); box.innerHTML = ""; return; }
   box.classList.remove("hide"); box.innerHTML = "";
-  var b = ele("b", null, (sc.curtain === "closed" ? "Curtain in" : "Curtain out") + " · scene note");
+  var b = ele("b", null, curtainSummary(sc) + " · scene note");
   box.appendChild(b);
   box.appendChild(document.createTextNode(sc.note));
 }
@@ -1682,13 +1743,7 @@ function paintSceneStrip(){
   });
   strip.appendChild(nm);
 
-  var seg = ele("div", "seg");
-  [["Curtain out","open"],["Curtain in","closed"]].forEach(function(o){
-    var b = ele("button", (sc.curtain||"open") === o[1] ? "on" : null, o[0]);
-    b.addEventListener("click", function(){ sc.curtain = o[1]; markDirty(); render(); });
-    seg.appendChild(b);
-  });
-  strip.appendChild(seg);
+  strip.appendChild(curtainSeg(sc));
 
   var note = document.createElement("input");
   note.type = "text"; note.className = "note";
@@ -1699,6 +1754,28 @@ function paintSceneStrip(){
   strip.appendChild(note);
   /* Reorder and delete are rarer and riskier, so they stay one tap in. */
   strip.appendChild(mkbtn("More…", "btn sm", sceneSheet));
+}
+
+/* One control for all three line sets. Each button says which curtain
+   it is and what state it is in, and tapping it flips that one — a
+   segmented control with a name and a state is self-describing, where
+   a row of lit and unlit names leaves you guessing which way round it
+   reads in the dark. */
+function curtainSeg(sc){
+  var seg = ele("div", "seg curtains");
+  CURTAINS.forEach(function(c){
+    var open = curtainAt(sc, c.key) === "open";
+    var b = ele("button", open ? null : "on");
+    b.appendChild(ele("span", "cn", c.short));
+    b.appendChild(ele("span", "cs", open ? "open" : "closed"));
+    b.title = c.name + " is " + (open ? "open" : "closed");
+    b.addEventListener("click", function(){
+      sc[c.key] = open ? "closed" : "open";
+      markDirty(); render();
+    });
+    seg.appendChild(b);
+  });
+  return seg;
 }
 
 /* ---------------- set pieces along the bottom ---------------- */
@@ -1925,13 +2002,10 @@ function sceneSheet(){
     l1.appendChild(i1); r1.appendChild(l1); body.appendChild(r1);
 
     var r2 = ele("div", "row");
-    var seg = ele("div", "seg");
-    [["Curtain out","open"],["Curtain in","closed"]].forEach(function(o){
-      var b = ele("button", (sc.curtain||"open") === o[1] ? "on" : null, o[0]);
-      b.addEventListener("click", function(){ sc.curtain = o[1]; markDirty(); render(); close(); sceneSheet(); });
-      seg.appendChild(b);
-    });
-    r2.appendChild(seg); body.appendChild(r2);
+    r2.appendChild(curtainSeg(sc));
+    body.appendChild(r2);
+    body.appendChild(ele("div", "help",
+      "Open means the audience can see through to the stage."));
 
     var r3 = ele("div", "row");
     var l3 = ele("label", "f"); l3.appendChild(ele("span", null, "What the crew needs to know"));
@@ -2100,7 +2174,7 @@ function buildSheet(){
     var hd = ele("div", "hd2");
     hd.appendChild(ele("span", "no", (i+1) + "."));
     hd.appendChild(ele("span", "nmx", sc.name));
-    hd.appendChild(ele("span", "cur", sc.curtain === "closed" ? "curtain in" : "curtain out"));
+    hd.appendChild(ele("span", "cur", curtainSummary(sc).toLowerCase()));
     blk.appendChild(hd);
     if(sc.note) blk.appendChild(ele("div", "nt", sc.note));
 
@@ -2327,7 +2401,7 @@ function render(){
   paintDeck();
   drawPieces(sc);
   drawRoutes(moves);
-  setCurtain(sc ? sc.curtain === "open" : true, false);
+  setCurtains(sc, false);
   paintPop();
   applyPanes();
 }
@@ -2415,6 +2489,9 @@ window.GL = {
   toFeet: toFeet,
   toUnits: toUnits,
   angleTo: angleTo,
+  curtainSummary: curtainSummary,
+  CURTAINS: CURTAINS,
+  movesBetween: movesBetween,
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,
