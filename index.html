@@ -196,6 +196,11 @@ body.mode-build .pc{cursor:grab}
 .spin-hit{fill:transparent;cursor:grab}
 .spin-arm{stroke:var(--work);stroke-width:1.5;stroke-dasharray:3 3;opacity:.8}
 .pc.dragging .spin{cursor:grabbing}
+/* The menu handle: a small dotted button beside the piece. Same size
+   and weight as the turn handle, so the pair read as one set of
+   controls rather than a control and a decoration. */
+.menu-btn{fill:var(--surface);stroke:var(--work);stroke-width:1.5;cursor:pointer}
+.menu-pip{fill:var(--work);pointer-events:none}
 
 /* ---------------- the sheet (phone) ----------------
    Height is animated on purpose, and transform is not a substitute.
@@ -285,35 +290,16 @@ body.mode-build .pc{cursor:grab}
 .pchip.sel{border-color:var(--work);box-shadow:inset 0 0 0 1px var(--work)}
 .pchip.add{color:var(--dim)}
 
-/* ---------------- piece inspector (build mode) ----------------
-   Docked under the plan rather than floated over it. Anchored to the
-   piece it describes, the form was taller than the strip of map it
-   covered, so on a phone you were editing something you could not see.
-
-   Capped and scrollable, so selecting a piece can never squeeze the
-   plan down to nothing. Input font-size stays at 16px — anything
-   smaller makes iOS zoom the page on focus. */
-.inspector{max-height:36vh;overflow:auto;-webkit-overflow-scrolling:touch;
-  border-bottom:1px solid var(--rule)}
-.insp{padding:9px 10px 10px}
-.insp .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+/* ---------------- piece menu (build mode) ----------------
+   Shown as a sheet, opened from the handle beside a selected piece.
+   It costs the map nothing until you ask for it, which floating it
+   next to the piece and docking it under the plan both failed to do.
+   Input font-size stays at 16px — smaller makes iOS zoom on focus. */
+.insp .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .insp .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
-.insp .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.insp .row{gap:6px}
-.insp .row + .row{margin-top:5px}
-.insp input{padding:7px 9px}
-.insp .help{margin-top:7px;font-size:11.5px}
-.insp .seg button{min-height:40px;padding:8px 6px;font-size:12.5px}
-.insp .btn.sm{min-height:36px}
+.insp .row + .row{margin-top:8px}
 label.f.size{flex:1 1 64px}
 label.f.size > span{white-space:nowrap}
-/* Docked full width, the fields would stretch across a whole iPad —
-   a note input a metre long is harder to read, not easier. */
-@media(min-width:640px){
-  .insp{max-width:860px}
-  .insp label.f{max-width:300px}
-  .insp .seg{max-width:520px}
-}
 
 /* ---------------- deck ---------------- */
 /* Fitts's law: the primary target sits ON the bottom edge, is the
@@ -479,7 +465,6 @@ label.f.size > span{white-space:nowrap}
 
     <div class="buildpane hide" id="buildpane">
       <div class="scenestrip" id="scenestrip"></div>
-      <div class="inspector" id="inspector"></div>
       <div class="tray" id="tray"></div>
     </div>
   </div>
@@ -952,11 +937,15 @@ function sizeLabels(){
 function xform(x, y, r){
   return "translate(" + x + "," + y + ")" + (r ? " rotate(" + r + ")" : "");
 }
-/* Height of the upright box a turned rectangle sits inside — where the
-   caption has to clear to. */
+/* The upright box a turned rectangle sits inside: the caption has to
+   clear its bottom, the menu handle has to clear its side. */
 function spanH(w, h, r){
   var a = r * Math.PI / 180;
   return Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
+}
+function spanW(w, h, r){
+  var a = r * Math.PI / 180;
+  return Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a));
 }
 /* The caption stays upright while the piece turns, so a name is never
    read sideways. Counter-rotating inside the turned group cancels the
@@ -968,6 +957,9 @@ function setPieceTransform(g, x, y, r, w, h, capFS){
   spin.setAttribute("transform", "rotate(" + (-r) + ")");
   var t = spin.querySelector(".cap");
   if(t) t.setAttribute("y", spanH(w, h, r)/2 + 4 + capFS);
+  var mg = spin.querySelector(".menu");
+  if(mg) mg.setAttribute("transform",
+    "translate(" + (spanW(w, h, r)/2 + (parseFloat(g.getAttribute("data-arm")) || 0)) + ",0)");
 }
 
 var SPIN_ARM = 22;          // handle stand-off from the piece, in CSS px
@@ -1010,17 +1002,30 @@ function drawPieces(scene){
       t.textContent = p.name;
     }
 
-    /* One handle, and it only turns. Size is typed in the popover:
-       a grab handle that resizes sits exactly where a thumb lands
-       while panning, and a set piece that quietly changes size is
-       worse than one that is slightly awkward to resize. */
+    /* Two handles on the selected piece, both small and both clear of
+       it. The one above turns; it rides with the piece so it points
+       the way the piece faces. The one beside opens the menu; it sits
+       in the upright group so it never swings underneath your thumb.
+       Neither resizes — size is typed, because a resize grip sits
+       exactly where a thumb lands while panning. */
     if(mode === "build" && selected === p.id){
       var arm = SPIN_ARM * k, rad = 7 * k;
+      g.setAttribute("data-arm", arm);
       var top = -hh/2 - arm;
       el("line", { x1:0, y1:-hh/2, x2:0, y2:top + rad, class:"spin-arm" }, g);
       el("circle", { cx:0, cy:top, r:rad, class:"spin" }, g);
       el("circle", { cx:0, cy:top, r:Math.max(rad*2.4, 22*k), class:"spin-hit",
                      "data-spin":"1" }, g);
+
+      var mg = el("g", { class:"menu",
+                         transform:"translate(" + (spanW(w,hh,rot)/2 + arm) + ",0)" }, up);
+      el("line", { x1:-arm + rad, y1:0, x2:0, y2:0, class:"spin-arm" }, mg);
+      el("circle", { cx:0, cy:0, r:rad*1.25, class:"menu-btn" }, mg);
+      [-1,0,1].forEach(function(i){
+        el("circle", { cx:i*rad*0.5, cy:0, r:rad*0.16, class:"menu-pip" }, mg);
+      });
+      el("circle", { cx:0, cy:0, r:Math.max(rad*2.4, 22*k), class:"spin-hit",
+                     "data-menu":"1" }, mg);
     }
     nodes[p.id] = g;
   });
@@ -1235,8 +1240,17 @@ function onPointerDown(evt){
   var p = svgPoint(evt);
   if(!p){ render(); return; }
 
-  var onSpin = wasSelected && evt.target.getAttribute &&
-               evt.target.getAttribute("data-spin") === "1";
+  /* The handles only answer on a piece that is already selected, so
+     the tap that picks a piece can never also fire one of them. */
+  var hit = wasSelected && evt.target.getAttribute ? evt.target : null;
+  if(hit && hit.getAttribute("data-menu") === "1"){
+    drag = null;
+    render();
+    pieceMenu();
+    if(evt.preventDefault) evt.preventDefault();
+    return;
+  }
+  var onSpin = !!hit && hit.getAttribute("data-spin") === "1";
   var sc = sceneAt(viewIdx), pl = sc && sc.place[id];
   var c = pl ? abs(pl) : null;
   var pc = pieceById(id);
@@ -1253,7 +1267,6 @@ function onPointerDown(evt){
   if(!wasSelected) render();                  // first tap selects and draws the handle
   drag.g = nodes[drag.id] || null;
   if(drag.g) drag.g.classList.add("dragging");
-  hideInspector();
   if(evt.preventDefault) evt.preventDefault();
 }
 
@@ -1686,7 +1699,6 @@ function setMode(m){
   if(m === "build" && !isSM()){ toast("Only the stage manager can build the show."); return; }
   mode = m;
   selected = null;
-  hideInspector();
   render();
   /* The pane under the plan changes size between the two screens, so
      the map has to be re-clamped to the box it now has. */
@@ -1757,10 +1769,7 @@ function moveScene(dir){
    delete. */
 function paintSceneStrip(){
   var strip = $("scenestrip");
-  /* One at a time. A selected piece and the scene it sits in are two
-     different jobs, and stacking both under the plan leaves no plan. */
-  strip.classList.toggle("hide", mode === "build" && !!selected);
-  if(mode !== "build" || selected){ strip.innerHTML = ""; return; }
+  if(mode !== "build"){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
   if(!sc) return;
@@ -1874,137 +1883,114 @@ function newPieceSheet(){
   });
 }
 
-/* ---------------- the piece inspector ---------------- */
-/* The piece whose note is being written, if any. Kept out here so a
-   render does not close the field mid-sentence. */
-var noteFor = null;
-function hideInspector(){ noteFor = null; $("inspector").innerHTML = ""; }
-
-/* The piece inspector is docked under the plan, not floated over it.
-   Anchored to the piece it describes it read well on a laptop and was
-   useless on a phone: the form is taller than the strip of map it was
-   covering, so you were editing something you could no longer see. */
-function paintInspector(){
-  var host = $("inspector");
-  host.innerHTML = "";
-  host.classList.toggle("hide", mode !== "build" || !selected);
-  if(mode !== "build" || !selected) return;
-  if(noteFor !== selected) noteFor = null;
+/* ---------------- the piece menu ----------------
+   Opened from the small handle beside a selected piece, and shown as
+   a sheet over everything. It was tried two other ways first: floated
+   next to the piece, where the form was taller than the strip of map
+   it covered; and docked under the plan, where it shrank the map every
+   time you touched a piece. Both were worse than a sheet you asked for
+   and can dismiss, which costs the map nothing until you open it. */
+function pieceMenu(){
   var sc = sceneAt(viewIdx), p = pieceById(selected);
-  if(!p){ selected = null; return; }
+  if(!p) return;
   var pl = sc ? sc.place[selected] : null;
 
-  var pop = ele("div", "insp");
-  var hd = ele("div", "hd");
-  var sw = ele("div", "sw"); sw.style.background = p.color;
-  hd.appendChild(sw);
-  hd.appendChild(ele("b", null, p.name));
-  hd.appendChild(ele("span", "tag", zoneLabel(pl)));
-  /* A note gets written once per piece and then read by the crew in
-     the move list, so it does not earn a permanent row in the thing
-     sitting on top of the map. It rides in the header instead, lit
-     when there is something written. */
-  if(pl){
-    var has = !!(pl.note || "").trim();
-    var nb = mkbtn(has ? "Note •" : "Note", "btn sm" + (has ? " on" : ""), function(){
-      noteFor = (noteFor === selected) ? null : selected;
-      render();
-      if(noteFor){
-        var f = $("inspector").querySelector(".notebox input");
-        if(f) f.focus();
-      }
-    });
-    nb.title = has ? pl.note : "Add a note for the crew";
-    hd.appendChild(nb);
-  }
-  hd.appendChild(mkbtn("✕", "btn sm", function(){ selected = null; render(); }));
-  pop.appendChild(hd);
+  modal(p.name, function(body, close){
+    var pop = ele("div", "insp");
 
-  /* Send it somewhere without dragging. On a phone this is the fast
-     path: the director says "put the bench on the aux stage" and it
-     is one tap, not a drag across a zoomed map. */
-  var seg = ele("div", "seg");
-  [["stage","Stage"],["wingSR","Wing SR"],["wingSL","Wing SL"],["aux","Aux"]].forEach(function(o){
-    var b = ele("button", pl && pl.zone === o[0] ? "on" : null, o[1]);
-    b.addEventListener("click", function(){ sendToZone(o[0]); });
-    seg.appendChild(b);
+    var hd = ele("div", "hd");
+    var sw = ele("div", "sw"); sw.style.background = p.color;
+    hd.appendChild(sw);
+    hd.appendChild(ele("span", "tag", zoneLabel(pl)));
+    pop.appendChild(hd);
+
+    /* Send it somewhere without dragging. On a phone this is the fast
+       path: the director says "put the bench on the aux stage" and it
+       is one tap, not a drag across a zoomed map. */
+    var seg = ele("div", "seg");
+    [["stage","Stage"],["wingSR","Wing SR"],["wingSL","Wing SL"],["aux","Aux"]].forEach(function(o){
+      var b = ele("button", pl && pl.zone === o[0] ? "on" : null, o[1]);
+      b.addEventListener("click", function(){ sendToZone(o[0]); close(); pieceMenu(); });
+      seg.appendChild(b);
+    });
+    pop.appendChild(seg);
+
+    if(pl){
+      var rn = ele("div", "row notebox");
+      var ln = ele("label", "f"); ln.appendChild(ele("span", null, "Note for the crew"));
+      var inp = document.createElement("input"); inp.type = "text";
+      inp.value = pl.note || "";
+      inp.placeholder = "upstage of leg 2";
+      inp.addEventListener("input", function(){ pl.note = inp.value; markDirty(); });
+      ln.appendChild(inp); rn.appendChild(ln); pop.appendChild(rn);
+    }
+
+    /* Size is typed, not dragged: a resize handle on the plan sits right
+       where a thumb lands, and a set piece that quietly changed size was
+       the thing that kept going wrong.
+
+       A size belongs to the piece, not to this placement — a sofa is one
+       sofa in every scene — so a change here changes it everywhere, on
+       purpose. The angle belongs to the placement, because the same sofa
+       genuinely does face different ways in different scenes. */
+    var rs = ele("div", "row");
+    [["Width","w"],["Depth","h"]].forEach(function(o){
+      var l = ele("label", "f size"); l.appendChild(ele("span", null, o[0]));
+      var i = document.createElement("input");
+      i.type = "text"; i.inputMode = "decimal";
+      i.value = fmtFeet(toFeet(p[o[1]]));
+      i.addEventListener("change", function(){
+        var ft = parseFeet(i.value);
+        if(ft === null){ i.value = fmtFeet(toFeet(p[o[1]])); return; }
+        p[o[1]] = clampSz(toUnits(ft));
+        i.value = fmtFeet(toFeet(p[o[1]]));      // show the clamped value back
+        markDirty(); drawPieces(sceneAt(viewIdx));
+      });
+      l.appendChild(i); rs.appendChild(l);
+    });
+    if(pl){
+      var lt = ele("label", "f size"); lt.appendChild(ele("span", null, "Turn"));
+      var it = document.createElement("input");
+      it.type = "text"; it.inputMode = "numeric";
+      it.value = normAngle(pl.r || 0) + "°";
+      it.addEventListener("change", function(){
+        var m = String(it.value).match(/-?[0-9.]+/);
+        pl.r = m ? normAngle(parseFloat(m[0])) : 0;
+        it.value = pl.r + "°";
+        markDirty(); render();
+      });
+      lt.appendChild(it); rs.appendChild(lt);
+    }
+    pop.appendChild(rs);
+
+    var r2 = ele("div", "row");
+    if(pl){
+      r2.appendChild(mkbtn("Straighten", "btn sm", function(){
+        pl.r = 0; markDirty(); render(); close(); pieceMenu();
+      }));
+      /* Not "take it out of play" — a piece sitting in a wing is still
+         in the show, it just does not move for this scene. Inheriting
+         the previous placement is what makes the diff produce no move
+         at all, which is the thing the crew actually wants. */
+      r2.appendChild(mkbtn("Same as last scene", "btn sm", function(){
+        leaveAsWas(); close();
+      }));
+      r2.appendChild(mkbtn("Off for this scene", "btn sm hot", function(){
+        delete sc.place[selected]; markDirty(); render(); close();
+        toast("Struck. The crew will be told to take it off.");
+      }));
+    } else {
+      r2.appendChild(mkbtn("Bring into this scene", "btn on", function(){
+        leaveAsWas(); close();
+      }));
+    }
+    pop.appendChild(r2);
+
+    var done = ele("div", "row"); done.style.marginTop = "12px";
+    done.appendChild(mkbtn("Done", "btn on wide", close));
+    pop.appendChild(done);
+    body.appendChild(pop);
   });
-  pop.appendChild(seg);
-
-  if(pl && noteFor === selected){
-    var rn = ele("div", "row notebox");
-    var ln = ele("label", "f"); ln.appendChild(ele("span", null, "Note for the crew"));
-    var inp = document.createElement("input"); inp.type = "text";
-    inp.value = pl.note || "";
-    inp.placeholder = "upstage of leg 2";
-    inp.addEventListener("input", function(){ pl.note = inp.value; markDirty(); });
-    ln.appendChild(inp); rn.appendChild(ln);
-    rn.appendChild(mkbtn("Done", "btn sm", function(){ noteFor = null; render(); }));
-    pop.appendChild(rn);
-  }
-
-  /* Size is typed, not dragged. A resize handle on the plan sits right
-     where a thumb lands, and a set piece that quietly changed size was
-     the thing that kept going wrong.
-
-     A size belongs to the piece, not to this placement — a sofa is one
-     sofa in every scene — so a change here changes it everywhere, on
-     purpose. The angle belongs to the placement, because the same sofa
-     genuinely does face different ways in different scenes. */
-  /* All three on one line. The popover floats over the plan, and on a
-     phone a stacked form is taller than the map it is covering — you
-     end up editing a piece you cannot see. */
-  var rs = ele("div", "row");
-  [["Width","w"],["Depth","h"]].forEach(function(o){
-    var l = ele("label", "f size"); l.appendChild(ele("span", null, o[0]));
-    var i = document.createElement("input");
-    i.type = "text"; i.inputMode = "decimal";
-    i.value = fmtFeet(toFeet(p[o[1]]));
-    i.addEventListener("change", function(){
-      var ft = parseFeet(i.value);
-      if(ft === null){ i.value = fmtFeet(toFeet(p[o[1]])); return; }
-      p[o[1]] = clampSz(toUnits(ft));
-      i.value = fmtFeet(toFeet(p[o[1]]));      // show the clamped value back
-      markDirty(); drawPieces(sceneAt(viewIdx));
-    });
-    l.appendChild(i); rs.appendChild(l);
-  });
-
-  if(pl){
-    var lt = ele("label", "f size"); lt.appendChild(ele("span", null, "Turn"));
-    var it = document.createElement("input");
-    it.type = "text"; it.inputMode = "numeric";
-    it.value = normAngle(pl.r || 0) + "°";
-    it.addEventListener("change", function(){
-      var m = String(it.value).match(/-?[\d.]+/);
-      pl.r = m ? normAngle(parseFloat(m[0])) : 0;
-      it.value = pl.r + "°";
-      markDirty(); render();
-    });
-    lt.appendChild(it); rs.appendChild(lt);
-  }
-  pop.appendChild(rs);
-
-
-  var r2 = ele("div", "row");
-  if(pl){
-    r2.appendChild(mkbtn("Straighten", "btn sm", function(){
-      pl.r = 0; markDirty(); render();
-    }));
-    /* Not "take it out of play" — a piece sitting in a wing is still
-       in the show, it just does not move for this scene. Inheriting
-       the previous placement is what makes the diff produce no move
-       at all, which is the thing the crew actually wants. */
-    r2.appendChild(mkbtn("Same as last scene", "btn sm", leaveAsWas));
-    r2.appendChild(mkbtn("Off for this scene", "btn sm hot", function(){
-      delete sc.place[selected]; markDirty(); render();
-      toast("Struck. The crew will be told to take it off.");
-    }));
-  } else {
-    r2.appendChild(mkbtn("Bring into this scene", "btn on", leaveAsWas));
-  }
-  pop.appendChild(r2);
-  host.appendChild(pop);
 }
 
 function sendToZone(zid){
@@ -2438,7 +2424,6 @@ function render(){
   paintMoves(moves);
   paintNote();
   paintSceneStrip();
-  paintInspector();
   paintTray();
   paintDeck();
   drawPieces(sc);
@@ -2536,6 +2521,7 @@ window.GL = {
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,
+  pieceMenu: pieceMenu,
   select: function(id){ selected = id; render(); },
   setApi: function(a){ api = a; apiState = a ? "live" : "local"; syncChip(); }
 };

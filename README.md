@@ -104,14 +104,14 @@ top, the plan fills the middle, and the set pieces run along the bottom.
 - The scene's **name, curtain and note** sit directly under the plan, because those are
   what a stage manager changes on nearly every pass. Reorder and delete — rarer, and
   riskier — stay one tap further in.
-- Tap a piece and its inspector **docks under the plan**, carrying its zone shortcuts,
-  its size, its angle, and what to do with it this scene. The crew note is one tap
-  further in, lit when there is something written, because it gets set once per piece
-  and read in the move list rather than here. It replaces the scene strip while it is
-  open, so only one of them is ever competing with the map.
-  Anchoring it to the piece read well on a laptop and was useless on a phone: the form
-  is taller than the strip of map it covered, so you were editing something you could
-  no longer see.
+- Tap a piece to select it. Two small handles appear beside it: one **turns** it, one
+  opens its **menu** — zone shortcuts, crew note, size, angle, and what to do with it
+  this scene. Selecting costs the map nothing; the menu is a sheet you ask for.
+
+  This took three goes. Floated next to the piece, the form was taller than the strip
+  of map it covered, so you were editing something you could no longer see. Docked
+  under the plan, it shrank the map every time you touched a piece. A handle and a
+  sheet leave the map alone until you want them.
 - **Size is typed, in feet.** `6`, `6'` and `6' 3"` all work, and a bare number is
   feet. Nothing on the plan resizes by dragging: a resize handle sits exactly where a
   thumb lands while panning, and a set piece that quietly changes size is worse than
@@ -192,7 +192,7 @@ npm ci
 npm test
 ```
 
-57 checks covering route derivation, move-list generation, the command deck's positional
+58 checks covering route derivation, move-list generation, the command deck's positional
 guarantees, build mode, feet parsing, free rotation and its snap, the three curtains,
 backstage modes, failed-call handling, the print sheet, and the self-rebuild round trip.
 

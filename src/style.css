@@ -184,6 +184,11 @@ body.mode-build .pc{cursor:grab}
 .spin-hit{fill:transparent;cursor:grab}
 .spin-arm{stroke:var(--work);stroke-width:1.5;stroke-dasharray:3 3;opacity:.8}
 .pc.dragging .spin{cursor:grabbing}
+/* The menu handle: a small dotted button beside the piece. Same size
+   and weight as the turn handle, so the pair read as one set of
+   controls rather than a control and a decoration. */
+.menu-btn{fill:var(--surface);stroke:var(--work);stroke-width:1.5;cursor:pointer}
+.menu-pip{fill:var(--work);pointer-events:none}
 
 /* ---------------- the sheet (phone) ----------------
    Height is animated on purpose, and transform is not a substitute.
@@ -273,35 +278,16 @@ body.mode-build .pc{cursor:grab}
 .pchip.sel{border-color:var(--work);box-shadow:inset 0 0 0 1px var(--work)}
 .pchip.add{color:var(--dim)}
 
-/* ---------------- piece inspector (build mode) ----------------
-   Docked under the plan rather than floated over it. Anchored to the
-   piece it describes, the form was taller than the strip of map it
-   covered, so on a phone you were editing something you could not see.
-
-   Capped and scrollable, so selecting a piece can never squeeze the
-   plan down to nothing. Input font-size stays at 16px — anything
-   smaller makes iOS zoom the page on focus. */
-.inspector{max-height:36vh;overflow:auto;-webkit-overflow-scrolling:touch;
-  border-bottom:1px solid var(--rule)}
-.insp{padding:9px 10px 10px}
-.insp .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+/* ---------------- piece menu (build mode) ----------------
+   Shown as a sheet, opened from the handle beside a selected piece.
+   It costs the map nothing until you ask for it, which floating it
+   next to the piece and docking it under the plan both failed to do.
+   Input font-size stays at 16px — smaller makes iOS zoom on focus. */
+.insp .hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .insp .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
-.insp .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.insp .row{gap:6px}
-.insp .row + .row{margin-top:5px}
-.insp input{padding:7px 9px}
-.insp .help{margin-top:7px;font-size:11.5px}
-.insp .seg button{min-height:40px;padding:8px 6px;font-size:12.5px}
-.insp .btn.sm{min-height:36px}
+.insp .row + .row{margin-top:8px}
 label.f.size{flex:1 1 64px}
 label.f.size > span{white-space:nowrap}
-/* Docked full width, the fields would stretch across a whole iPad —
-   a note input a metre long is harder to read, not easier. */
-@media(min-width:640px){
-  .insp{max-width:860px}
-  .insp label.f{max-width:300px}
-  .insp .seg{max-width:520px}
-}
 
 /* ---------------- deck ---------------- */
 /* Fitts's law: the primary target sits ON the bottom edge, is the
