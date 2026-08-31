@@ -239,6 +239,22 @@ setTimeout(async () => {
     if ([...chips].some(c => c.classList.contains("out")))
       throw new Error("every piece is in this scene, none should read as absent");
   });
+  step("the scene row folds away behind one chevron", () => {
+    const strip = d.getElementById("scenestrip");
+    const fold = () => strip.querySelector(".fold");
+    if (!fold()) throw new Error("no fold control");
+    if (fold().textContent !== "▴") throw new Error("open chevron reads " + fold().textContent);
+    if (!strip.querySelector(".seg.curtains")) throw new Error("curtains missing while open");
+    fold().click();
+    if (!strip.classList.contains("shut")) throw new Error("did not fold");
+    if (strip.children.length !== 1) throw new Error("folded row still has " + strip.children.length + " controls");
+    if (fold().textContent !== "▾") throw new Error("shut chevron reads " + fold().textContent);
+    // the scene is still named above, so folding loses nothing
+    if (!d.querySelector("#scenebar .chip.cur")) throw new Error("no scene chip to fall back on");
+    fold().click();
+    if (strip.classList.contains("shut")) throw new Error("did not reopen");
+    if (!strip.querySelector(".seg.curtains")) throw new Error("curtains did not come back");
+  });
   step("selecting a piece costs the map nothing", () => {
     goToScene(1);
     d.querySelector("#tray .pchip:not(.add)").click();

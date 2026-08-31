@@ -268,6 +268,10 @@ body.mode-build .pc{cursor:grab}
 .seg.curtains button.on .cn{opacity:.85}
 .scenestrip .btn{min-height:40px}
 .scenestrip .note{flex:1 1 190px}
+/* The fold chevron sits hard right in both states, so it is the same
+   target whether the row is open or shut. */
+.scenestrip .fold{margin-left:auto;width:40px;padding:0;font-size:15px;line-height:1}
+.scenestrip.shut{padding:3px 10px}
 .tray{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;
   scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .pchip{flex:none;display:flex;align-items:center;gap:8px;cursor:pointer;
