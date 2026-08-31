@@ -177,11 +177,15 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none}
 body.mode-build .pc{cursor:grab}
 .pc.dragging{cursor:grabbing}
 .pc.dragging .body{stroke:var(--work);stroke-width:3}
-/* Corner grip, build mode, selected piece only: drag it to resize.
-   The visible square stays small so it does not hide the piece; a
-   transparent square under it gives the thumb something to hit. */
-.grip{fill:var(--work);stroke:var(--work-ink);stroke-width:1.5;cursor:nwse-resize}
-.grip-hit{fill:transparent;cursor:nwse-resize}
+/* Turn handle, build mode, selected piece only. It stands off the
+   piece on an arm so it is never confused with the piece itself, and
+   the transparent circle under it gives a thumb something to hit
+   without covering what is being turned. Nothing on the plan resizes:
+   size is typed in the popover. */
+.spin{fill:var(--work);stroke:var(--work-ink);stroke-width:1.5;cursor:grab}
+.spin-hit{fill:transparent;cursor:grab}
+.spin-arm{stroke:var(--work);stroke-width:1.5;stroke-dasharray:3 3;opacity:.8}
+.pc.dragging .spin{cursor:grabbing}
 
 /* ---------------- the sheet (phone) ----------------
    Height is animated on purpose, and transform is not a substitute.
@@ -272,6 +276,18 @@ body.mode-build .pc{cursor:grab}
 .pop .hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
 .pop .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
 .pop .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Compact inside the popover: it floats over the map it is editing, so
+   every row it does not need is map you can still see. Input font-size
+   stays at 16px — anything smaller makes iOS zoom the page on focus. */
+.pop{max-height:calc(100% - 20px);overflow:auto;padding:11px}
+.pop .row{gap:6px}
+.pop .row + .row{margin-top:7px}
+.pop input{padding:7px 9px}
+.pop .help{margin-top:7px;font-size:11.5px}
+.pop .seg button{min-height:40px;padding:8px 6px;font-size:12.5px}
+.pop .btn.sm{min-height:36px}
+label.f.size{flex:1 1 64px}
+label.f.size > span{white-space:nowrap}
 
 /* ---------------- deck ---------------- */
 /* Fitts's law: the primary target sits ON the bottom edge, is the
@@ -447,7 +463,7 @@ body.mode-build .pc{cursor:grab}
 <div class="sheetprint" id="runsheet"></div>
 <div id="dim"></div>
 
-<script id="state" type="application/json">{"rev":6,"show":"Spring Production","liveIndex":3,"liveStamp":1787933485486,"pieces":[{"id":"p1","name":"Sofa","w":118,"h":50,"color":"#C1683B"},{"id":"p2","name":"Kitchen table","w":86,"h":62,"color":"#4E8C6A"},{"id":"p3","name":"Chair A","w":34,"h":34,"color":"#6D7BC4"},{"id":"p4","name":"Chair B","w":34,"h":34,"color":"#6D7BC4"},{"id":"p5","name":"Door unit","w":74,"h":26,"color":"#9C5AA8"},{"id":"p6","name":"Platform wagon","w":150,"h":92,"color":"#B0913F"},{"id":"p7","name":"Bench","w":98,"h":32,"color":"#3F8AA0"},{"id":"p8","name":"Lamppost","w":26,"h":26,"color":"#B8474C"}],"scenes":[{"id":"s1","name":"Preshow","note":"House open. Nothing onstage but the wagon, parked upstage centre. Everything else preset in the wings.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.34,"r":0,"note":"Against back wall, upstage of leg 2"},"p2":{"zone":"wingSR","x":0.5,"y":0.62,"r":0,"note":"Downstage of leg 3, chairs stacked on top"},"p3":{"zone":"wingSR","x":0.28,"y":0.78,"r":0,"note":""},"p4":{"zone":"wingSR","x":0.66,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s2","name":"1-1 Kitchen","note":"Curtain out. Table and both chairs live centre; sofa comes on stage right.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"stage","x":0.48,"y":0.55,"r":0,"note":""},"p3":{"zone":"stage","x":0.34,"y":0.55,"r":0,"note":""},"p4":{"zone":"stage","x":0.62,"y":0.55,"r":0,"note":""},"p1":{"zone":"stage","x":0.2,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s3","name":"1-2 Street","note":"Blackout change, 40 seconds. Kitchen strikes to wing SR, bench and lamppost come on. Door unit travels aux to wing SR first — do that during 1-1.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p7":{"zone":"stage","x":0.58,"y":0.7,"r":0,"note":""},"p8":{"zone":"stage","x":0.24,"y":0.62,"r":0,"note":""},"p5":{"zone":"wingSR","x":0.5,"y":0.5,"r":0,"note":"Staged for act 2, downstage of leg 2"},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s4","name":"Intermission","note":"Curtain in. Full reset for act 2 — 12 minutes. Door unit onto the wagon.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s5","name":"2-1 Parlor","note":"Curtain out on the top of act 2. Sofa and both chairs, door unit stays on the wagon.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p1":{"zone":"stage","x":0.44,"y":0.66,"r":0,"note":""},"p3":{"zone":"stage","x":0.2,"y":0.6,"r":0,"note":""},"p4":{"zone":"stage","x":0.72,"y":0.62,"r":0,"note":""},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""}}}],"demo":true}</script>
+<script id="state" type="application/json">{"rev":6,"show":"Spring Production","stageFeet":40,"liveIndex":3,"liveStamp":1787933485486,"pieces":[{"id":"p1","name":"Sofa","w":118,"h":50,"color":"#C1683B"},{"id":"p2","name":"Kitchen table","w":86,"h":62,"color":"#4E8C6A"},{"id":"p3","name":"Chair A","w":34,"h":34,"color":"#6D7BC4"},{"id":"p4","name":"Chair B","w":34,"h":34,"color":"#6D7BC4"},{"id":"p5","name":"Door unit","w":74,"h":26,"color":"#9C5AA8"},{"id":"p6","name":"Platform wagon","w":150,"h":92,"color":"#B0913F"},{"id":"p7","name":"Bench","w":98,"h":32,"color":"#3F8AA0"},{"id":"p8","name":"Lamppost","w":26,"h":26,"color":"#B8474C"}],"scenes":[{"id":"s1","name":"Preshow","note":"House open. Nothing onstage but the wagon, parked upstage centre. Everything else preset in the wings.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.34,"r":0,"note":"Against back wall, upstage of leg 2"},"p2":{"zone":"wingSR","x":0.5,"y":0.62,"r":0,"note":"Downstage of leg 3, chairs stacked on top"},"p3":{"zone":"wingSR","x":0.28,"y":0.78,"r":0,"note":""},"p4":{"zone":"wingSR","x":0.66,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s2","name":"1-1 Kitchen","note":"Curtain out. Table and both chairs live centre; sofa comes on stage right.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"stage","x":0.48,"y":0.55,"r":0,"note":""},"p3":{"zone":"stage","x":0.34,"y":0.55,"r":0,"note":""},"p4":{"zone":"stage","x":0.62,"y":0.55,"r":0,"note":""},"p1":{"zone":"stage","x":0.2,"y":0.78,"r":0,"note":""},"p5":{"zone":"aux","x":0.5,"y":0.3,"r":0,"note":"Flat side to the wall"},"p7":{"zone":"wingSL","x":0.5,"y":0.5,"r":0,"note":"Between legs 2 and 3"},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""}}},{"id":"s3","name":"1-2 Street","note":"Blackout change, 40 seconds. Kitchen strikes to wing SR, bench and lamppost come on. Door unit travels aux to wing SR first — do that during 1-1.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p7":{"zone":"stage","x":0.58,"y":0.7,"r":0,"note":""},"p8":{"zone":"stage","x":0.24,"y":0.62,"r":0,"note":""},"p5":{"zone":"wingSR","x":0.5,"y":0.5,"r":0,"note":"Staged for act 2, downstage of leg 2"},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s4","name":"Intermission","note":"Curtain in. Full reset for act 2 — 12 minutes. Door unit onto the wagon.","curtain":"closed","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p1":{"zone":"wingSR","x":0.5,"y":0.2,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""},"p3":{"zone":"wingSL","x":0.32,"y":0.24,"r":0,"note":""},"p4":{"zone":"wingSL","x":0.68,"y":0.24,"r":0,"note":""}}},{"id":"s5","name":"2-1 Parlor","note":"Curtain out on the top of act 2. Sofa and both chairs, door unit stays on the wagon.","curtain":"open","place":{"p6":{"zone":"stage","x":0.5,"y":0.2,"r":0,"note":""},"p5":{"zone":"stage","x":0.5,"y":0.16,"r":0,"note":"Bolted to the wagon deck"},"p1":{"zone":"stage","x":0.44,"y":0.66,"r":0,"note":""},"p3":{"zone":"stage","x":0.2,"y":0.6,"r":0,"note":""},"p4":{"zone":"stage","x":0.72,"y":0.62,"r":0,"note":""},"p7":{"zone":"wingSL","x":0.5,"y":0.6,"r":0,"note":""},"p8":{"zone":"aux","x":0.5,"y":0.72,"r":0,"note":""},"p2":{"zone":"wingSR","x":0.5,"y":0.8,"r":0,"note":""}}}],"demo":true}</script>
 
 <script id="app">
 (function(){
@@ -572,8 +588,64 @@ var ORDER = { aux:0, wingSR:1, stage:2, wingSL:3 };
 var SIDE  = { aux:"R", wingSR:"R", stage:"C", wingSL:"L" };
 var CROSS_Y = 50, CURTAIN_Y = 542;
 var COLS = ["R","C","L"], ROWS = ["US","MS","DS"];
-var MINSZ = 16, MAXSZ = 280;
 var PALETTE = ["#C1683B","#4E8C6A","#6D7BC4","#9C5AA8","#B0913F","#3F8AA0","#B8474C","#7E6BB5"];
+
+/* ---------------- feet ----------------
+   The plan is drawn in its own units; a crew measures in feet. One
+   number ties them together: how wide the stage really is. The stage
+   zone is 600 units across, so a foot is 600 / stageFeet units, and
+   every piece can be typed and read back in feet and inches.
+
+   It lives on the show because it is a fact about one theatre. Change
+   it and nothing on the plan moves — the same drawing is simply being
+   measured against a different stage. */
+var STAGE_FT_DEFAULT = 40;
+var MIN_FT = 0.5, MAX_FT = 40;
+
+function stageFeet(){ return (S.stageFeet > 0) ? S.stageFeet : STAGE_FT_DEFAULT; }
+function unitsPerFoot(){ return ZONES.stage.w / stageFeet(); }
+function toFeet(u){ return u / unitsPerFoot(); }
+function toUnits(ft){ return ft * unitsPerFoot(); }
+function clampSz(u){
+  return Math.round(Math.max(toUnits(MIN_FT), Math.min(toUnits(MAX_FT), u)));
+}
+
+/* Read what a person actually types. A bare number is feet, because
+   that is how set pieces get talked about: "the sofa is about seven
+   foot". Also takes 8', 8'6, 8'6", 8 ft 6 in, 18", 8.5. */
+function parseFeet(raw){
+  var s = String(raw == null ? "" : raw).trim().toLowerCase();
+  if(!s) return null;
+  s = s.replace(/[′´`]/g, "'").replace(/[″”“]/g, '"');
+  var ft = 0, inch = 0, sawFeet = false, sawInch = false, m;
+
+  m = s.match(/([\d.]+)\s*(?:'|ft\b|feet\b|foot\b)/);
+  if(m){ ft = parseFloat(m[1]); sawFeet = true; s = s.slice(m.index + m[0].length); }
+
+  m = s.match(/([\d.]+)\s*(?:"|in\b|ins\b|inch|inches)/);
+  if(m){ inch = parseFloat(m[1]); sawInch = true; }
+  else if(sawFeet){
+    m = s.match(/([\d.]+)/);            // trailing bare number after feet is inches: 8'6
+    if(m) inch = parseFloat(m[1]);
+  }
+
+  if(!sawFeet && !sawInch){
+    m = s.match(/([\d.]+)/);
+    if(!m) return null;
+    ft = parseFloat(m[1]);
+  }
+  var v = ft + inch/12;
+  return isFinite(v) ? v : null;
+}
+function fmtFeet(ft){
+  var total = Math.round(ft * 12);
+  var f = Math.floor(total / 12), i = total % 12;
+  if(!f) return i + '"';
+  return i ? f + "' " + i + '"' : f + "'";
+}
+
+/* An angle you can read. Rotation is free, so it is rarely round. */
+function normAngle(r){ r = Math.round(r) % 360; return r < 0 ? r + 360 : r; }
 
 function zoneOf(id){ return ZONES[id]; }
 function abs(pl){ var z = zoneOf(pl.zone); if(!z) return null; return { x:z.x+pl.x*z.w, y:z.y+pl.y*z.h }; }
@@ -617,7 +689,13 @@ function route(from, to){
 
 /* A nudge of less than 5% of a zone is not a move worth calling. */
 var MOVE_EPS = 0.05;
-var VERB = { on:"Bring on", off:"Strike", shift:"Reposition", trav:"Move" };
+var VERB = { on:"Bring on", off:"Strike", shift:"Reposition", trav:"Move", turn:"Turn" };
+/* A piece that only pivots is its own kind of move. Called as a
+   reposition it reads "Stage USC to Stage USC", which tells the crew
+   nothing about what to actually go and do. */
+function turnText(a, b){
+  return normAngle((a && a.r) || 0) + "° → " + normAngle((b && b.r) || 0) + "°";
+}
 
 function movesBetween(prev, next){
   if(!next || !prev) return [];
@@ -635,12 +713,17 @@ function movesBetween(prev, next){
     if(!a && !b) return;
     if(!b){ out.push({ kind:"off", piece:p, from:a, to:null }); return; }
     if(!a){ out.push({ kind:"on", piece:p, from:null, to:b }); return; }
-    if(a.zone !== b.zone){ out.push({ kind:"trav", piece:p, from:a, to:b, r:route(a,b) }); return; }
-    if(Math.abs(a.x-b.x) > MOVE_EPS || Math.abs(a.y-b.y) > MOVE_EPS || (a.r||0) !== (b.r||0)){
-      out.push({ kind:"shift", piece:p, from:a, to:b, r:route(a,b) });
+    var turned = (a.r||0) !== (b.r||0);
+    if(a.zone !== b.zone){
+      out.push({ kind:"trav", piece:p, from:a, to:b, r:route(a,b), turned:turned }); return;
+    }
+    var slid = Math.abs(a.x-b.x) > MOVE_EPS || Math.abs(a.y-b.y) > MOVE_EPS;
+    if(slid || turned){
+      out.push({ kind: slid ? "shift" : "turn", piece:p, from:a, to:b,
+                 r:route(a,b), turned:turned });
     }
   });
-  var rank = { curtain:0, trav:1, on:2, shift:3, off:4 };
+  var rank = { curtain:0, trav:1, on:2, shift:3, turn:4, off:5 };
   out.sort(function(m,n){ return rank[m.kind] - rank[n.kind]; });
   return out;
 }
@@ -780,7 +863,32 @@ function sizeLabels(){
   }
 }
 
-var GRIP = 9;               // grip square, in CSS px
+/* A piece is drawn at its true footprint and then turned, rather than
+   having its width and height swapped. Swapping only ever expressed
+   two angles; a flat pointing upstage at 30 degrees is a real thing a
+   set does. */
+function xform(x, y, r){
+  return "translate(" + x + "," + y + ")" + (r ? " rotate(" + r + ")" : "");
+}
+/* Height of the upright box a turned rectangle sits inside — where the
+   caption has to clear to. */
+function spanH(w, h, r){
+  var a = r * Math.PI / 180;
+  return Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
+}
+/* The caption stays upright while the piece turns, so a name is never
+   read sideways. Counter-rotating inside the turned group cancels the
+   turn for the text without moving the piece. */
+function setPieceTransform(g, x, y, r, w, h, capFS){
+  g.setAttribute("transform", xform(x, y, r));
+  var spin = g.querySelector(".upright");
+  if(!spin) return;
+  spin.setAttribute("transform", "rotate(" + (-r) + ")");
+  var t = spin.querySelector(".cap");
+  if(t) t.setAttribute("y", spanH(w, h, r)/2 + 4 + capFS);
+}
+
+var SPIN_ARM = 22;          // handle stand-off from the piece, in CSS px
 function drawPieces(scene){
   if(!pieceLayer) return;
   pieceLayer.innerHTML = ""; nodes = {};
@@ -804,27 +912,33 @@ function drawPieces(scene){
     if(!pl) return;
     var a = abs(pl); if(!a) return;
     var rot = pl.r || 0;
-    var w = rot ? p.h : p.w, hh = rot ? p.w : p.h;
+    var w = p.w, hh = p.h;
     var g = el("g", { class:"pc" + (selected===p.id ? " sel" : ""), "data-id":p.id,
-                      transform:"translate("+a.x+","+a.y+")" }, pieceLayer);
+                      transform:xform(a.x, a.y, rot) }, pieceLayer);
     var rx = Math.min(9, Math.min(w, hh) / 4);
     el("rect", { x:-w/2-5, y:-hh/2-5, width:w+10, height:hh+10, rx:rx+4, class:"halo" }, g);
     el("rect", { x:-w/2, y:-hh/2, width:w, height:hh, rx:rx, class:"body",
                  fill:p.color, stroke:"rgba(0,0,0,.4)" }, g);
+    if(pl.note) el("circle", { cx:w/2-6, cy:-hh/2+6, r:Math.max(3, 3.5*k), class:"note-dot" }, g);
+
+    var up = el("g", { class:"upright", transform:"rotate(" + (-rot) + ")" }, g);
     if(!named || named[p.id]){
-      var t = el("text", { x:0, y:hh/2+4+capFS, "text-anchor":"middle", class:"cap",
-                           "font-size":capFS, fill:"var(--ink)" }, g);
+      var t = el("text", { x:0, y:spanH(w,hh,rot)/2+4+capFS, "text-anchor":"middle",
+                           class:"cap", "font-size":capFS, fill:"var(--ink)" }, up);
       t.textContent = p.name;
     }
-    if(pl.note) el("circle", { cx:w/2-6, cy:-hh/2+6, r:Math.max(3, 3.5*k), class:"note-dot" }, g);
-    /* Resize by dragging the corner, so the crew never has to think
-       in plan units. Only the selected piece, only while building. */
+
+    /* One handle, and it only turns. Size is typed in the popover:
+       a grab handle that resizes sits exactly where a thumb lands
+       while panning, and a set piece that quietly changes size is
+       worse than one that is slightly awkward to resize. */
     if(mode === "build" && selected === p.id){
-      var gs = GRIP * k;
-      el("rect", { x:w/2-gs*1.6, y:hh/2-gs*1.6, width:gs*3.2, height:gs*3.2,
-                   class:"grip-hit", "data-grip":"1" }, g);
-      el("rect", { x:w/2-gs/2, y:hh/2-gs/2, width:gs, height:gs, rx:gs/4,
-                   class:"grip", "data-grip":"1" }, g);
+      var arm = SPIN_ARM * k, rad = 7 * k;
+      var top = -hh/2 - arm;
+      el("line", { x1:0, y1:-hh/2, x2:0, y2:top + rad, class:"spin-arm" }, g);
+      el("circle", { cx:0, cy:top, r:rad, class:"spin" }, g);
+      el("circle", { cx:0, cy:top, r:Math.max(rad*2.4, 22*k), class:"spin-hit",
+                     "data-spin":"1" }, g);
     }
     nodes[p.id] = g;
   });
@@ -856,6 +970,7 @@ function animateTransition(fromScene, toScene){
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(!fromScene || reduce){ setCurtain(toScene.curtain === "open", false); return; }
 
+  var capFS = Math.max(9, 11.5 * planScale());
   var tracks = [];
   moves.forEach(function(m){
     if(!m.piece || !m.r || m.r.pts.length < 2) return;
@@ -865,8 +980,14 @@ function animateTransition(fromScene, toScene){
       var dx = pts[i].x-pts[i-1].x, dy = pts[i].y-pts[i-1].y, len = Math.sqrt(dx*dx+dy*dy);
       segs.push({ a:pts[i-1], b:pts[i], len:len }); total += len;
     }
-    if(total < 1) return;
-    tracks.push({ g:g, segs:segs, total:total });
+    /* Turning counts as moving. A flat that only pivots travels no
+       distance, but the crew still has to go and turn it, so it gets a
+       track and the plan shows the turn. */
+    var r0 = (m.from && m.from.r) || 0, r1 = (m.to && m.to.r) || 0;
+    var spin = ((r1 - r0 + 540) % 360) - 180;   // shortest way round
+    if(total < 1 && !spin) return;
+    tracks.push({ g:g, segs:segs, total:total, r0:r0, spin:spin,
+                  w:m.piece.w, h:m.piece.h });
   });
   if(!tracks.length){
     setCurtain(fromScene.curtain === "open", false);
@@ -892,13 +1013,13 @@ function animateTransition(fromScene, toScene){
         }
         acc += s.len;
       }
-      tr.g.setAttribute("transform", "translate("+pos.x+","+pos.y+")");
+      setPieceTransform(tr.g, pos.x, pos.y, tr.r0 + tr.spin*e, tr.w, tr.h, capFS);
     });
     if(k < 1) animRAF = requestAnimationFrame(step);
     else { animRAF = null; drawPieces(toScene); drawRoutes(moves); }
   }
   tracks.forEach(function(tr){
-    tr.g.setAttribute("transform", "translate("+tr.segs[0].a.x+","+tr.segs[0].a.y+")");
+    setPieceTransform(tr.g, tr.segs[0].a.x, tr.segs[0].a.y, tr.r0, tr.w, tr.h, capFS);
   });
   setCurtain(fromScene.curtain === "open", false);
   requestAnimationFrame(function(){
@@ -1034,16 +1155,17 @@ function onPointerDown(evt){
   var p = svgPoint(evt);
   if(!p){ render(); return; }
 
-  var onGrip = wasSelected && evt.target.getAttribute &&
-               evt.target.getAttribute("data-grip") === "1";
+  var onSpin = wasSelected && evt.target.getAttribute &&
+               evt.target.getAttribute("data-spin") === "1";
   var sc = sceneAt(viewIdx), pl = sc && sc.place[id];
   var c = pl ? abs(pl) : null;
-  drag = onGrip
-    ? { id:id, mode:"size", c:c }
+  var pc = pieceById(id);
+  drag = onSpin
+    ? { id:id, mode:"spin", c:c, w:(pc?pc.w:0), h:(pc?pc.h:0), capFS:Math.max(9, 11.5*planScale()) }
     : { id:id, mode:"move", ox: c ? c.x - p.x : 0, oy: c ? c.y - p.y : 0 };
 
   if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
-  if(!wasSelected) render();                  // first tap selects and draws the grip
+  if(!wasSelected) render();                  // first tap selects and draws the handle
   drag.g = nodes[drag.id] || null;
   if(drag.g) drag.g.classList.add("dragging");
   hidePop();
@@ -1084,20 +1206,30 @@ function onPointerMove(evt){
 
   if(!drag || !drag.g) return;
   var p = svgPoint(evt); if(!p) return;
-  if(drag.mode === "size"){
+  if(drag.mode === "spin"){
     if(!drag.c) return;
-    var pc = pieceById(drag.id); if(!pc) return;
     var sc = sceneAt(viewIdx), pl = sc && sc.place[drag.id];
-    var rot = (pl && pl.r) || 0;
-    var w = clampSz(Math.abs(p.x - drag.c.x) * 2);
-    var h = clampSz(Math.abs(p.y - drag.c.y) * 2);
-    pc.w = rot ? h : w; pc.h = rot ? w : h;
-    drawPieces(sc);
-    drag.g = nodes[drag.id] || null;
-    if(drag.g) drag.g.classList.add("dragging");
+    if(!pl) return;
+    pl.r = angleTo(drag.c, p);
+    setPieceTransform(drag.g, drag.c.x, drag.c.y, pl.r, drag.w, drag.h, drag.capFS);
     return;
   }
-  drag.g.setAttribute("transform", "translate("+(p.x+drag.ox)+","+(p.y+drag.oy)+")");
+  drag.g.setAttribute("transform", xform(p.x + drag.ox, p.y + drag.oy, 0));
+}
+
+/* The handle stands straight up from the piece, so the angle from the
+   piece to the finger is the angle to turn it to.
+
+   It snaps when it is nearly square. Most of a set is built to the
+   proscenium, and free rotation that cannot quite reach a clean 90 is
+   worse than no free rotation at all — but the snap is only a few
+   degrees wide, so a deliberate 37 stays 37. */
+var SNAP_EVERY = 15, SNAP_WITHIN = 4;
+function angleTo(centre, p){
+  var r = Math.atan2(p.y - centre.y, p.x - centre.x) * 180 / Math.PI + 90;
+  r = normAngle(r);
+  var near = Math.round(r / SNAP_EVERY) * SNAP_EVERY;
+  return normAngle(Math.abs(r - near) <= SNAP_WITHIN ? near : r);
 }
 
 function onPointerUp(evt){
@@ -1105,7 +1237,7 @@ function onPointerUp(evt){
   if(pinch && pointerList().length < 2){ pinch = null; redrawForWidth(); }
   if(pan && pan.id === evt.pointerId){ pan = null; redrawForWidth(); return; }
   if(!drag) return;
-  if(drag.mode === "size"){ drag = null; markDirty(); render(); return; }
+  if(drag.mode === "spin"){ drag = null; markDirty(); render(); return; }
 
   var p = svgPoint(evt);
   var sc = sceneAt(viewIdx);
@@ -1136,7 +1268,6 @@ function onWheel(evt){
   if(evt.preventDefault) evt.preventDefault();
   zoomAbout(pt.x, pt.y, evt.deltaY < 0 ? 1.18 : 1/1.18);
 }
-function clampSz(n){ return Math.round(Math.max(MINSZ, Math.min(MAXSZ, n))); }
 
 /* ===== src/parts/30-run.js ===== */
 /* ===============================================================
@@ -1308,12 +1439,20 @@ function paintMoves(moves){
     nm.appendChild(document.createTextNode(m.piece.name));
     var path = ele("div", "path");
     function z(text, cls){ return ele("span", "z" + (cls ? " " + cls : ""), text); }
-    if(m.from) path.appendChild(z(zoneLabel(m.from)));
-    if(m.r && m.r.via.length) m.r.via.forEach(function(v){
-      path.appendChild(ele("span", "ar", "→")); path.appendChild(z(v, "via"));
-    });
-    if(m.from) path.appendChild(ele("span", "ar", "→"));
-    path.appendChild(z(m.to ? zoneLabel(m.to) : "Out of play"));
+    if(m.kind === "turn"){
+      path.appendChild(z(zoneLabel(m.to)));
+    } else {
+      if(m.from) path.appendChild(z(zoneLabel(m.from)));
+      if(m.r && m.r.via.length) m.r.via.forEach(function(v){
+        path.appendChild(ele("span", "ar", "→")); path.appendChild(z(v, "via"));
+      });
+      if(m.from) path.appendChild(ele("span", "ar", "→"));
+      path.appendChild(z(m.to ? zoneLabel(m.to) : "Out of play"));
+    }
+    if(m.turned){
+      path.appendChild(ele("span", "ar", "·"));
+      path.appendChild(z(turnText(m.from, m.to), "via"));
+    }
     tx.appendChild(nm); tx.appendChild(path);
     if(m.to && m.to.note) tx.appendChild(ele("div", "hint", m.to.note));
     d.appendChild(sw); d.appendChild(tx);
@@ -1591,16 +1730,17 @@ function newPieceSheet(){
   var name = "", w = "", h = "";
   modal("Add a set piece", function(body, close){
     body.appendChild(ele("div", "help",
-      "Size is a rough footprint on the plan. Drop it in, then drag its corner to match the real thing."));
+      "Its footprint on the deck, in feet. 6, 6' and 6' 3\" all work; a bare "
+      + "number is feet. Measured against a " + fmtFeet(stageFeet()) + " wide stage."));
     var r1 = ele("div", "row");
     var l1 = ele("label", "f"); l1.appendChild(ele("span", null, "Name"));
     var i1 = document.createElement("input"); i1.type = "text"; i1.placeholder = "Kitchen table";
     l1.appendChild(i1); r1.appendChild(l1); body.appendChild(r1);
     var r2 = ele("div", "row");
-    [["Width", 80], ["Depth", 45]].forEach(function(o){
+    [["Width", "5'"], ["Depth", "3'"]].forEach(function(o){
       var l = ele("label", "f"); l.appendChild(ele("span", null, o[0]));
-      var i = document.createElement("input"); i.type = "text"; i.inputMode = "numeric";
-      i.placeholder = String(o[1]); i.dataset.k = o[0];
+      var i = document.createElement("input"); i.type = "text"; i.inputMode = "decimal";
+      i.placeholder = o[1];
       l.appendChild(i); r2.appendChild(l);
     });
     body.appendChild(r2);
@@ -1610,8 +1750,9 @@ function newPieceSheet(){
       name = i1.value.trim();
       if(!name){ toast("Give the piece a name first."); i1.focus(); return; }
       var ins = r2.querySelectorAll("input");
-      w = clampSz(parseInt(ins[0].value, 10) || 80);
-      h = clampSz(parseInt(ins[1].value, 10) || 45);
+      var wf = parseFeet(ins[0].value), hf = parseFeet(ins[1].value);
+      w = clampSz(toUnits(wf === null ? 5 : wf));
+      h = clampSz(toUnits(hf === null ? 3 : hf));
       var p = { id:"p"+Date.now(), name:name, w:w, h:h,
                 color: PALETTE[S.pieces.length % PALETTE.length] };
       S.pieces.push(p);
@@ -1666,10 +1807,57 @@ function paintPop(){
   inp.addEventListener("input", function(){ if(pl){ pl.note = inp.value; markDirty(); } });
   ln.appendChild(inp); rn.appendChild(ln); pop.appendChild(rn);
 
+  /* Size is typed, not dragged. A resize handle on the plan sits right
+     where a thumb lands, and a set piece that quietly changed size was
+     the thing that kept going wrong.
+
+     A size belongs to the piece, not to this placement — a sofa is one
+     sofa in every scene — so a change here changes it everywhere, on
+     purpose. The angle belongs to the placement, because the same sofa
+     genuinely does face different ways in different scenes. */
+  /* All three on one line. The popover floats over the plan, and on a
+     phone a stacked form is taller than the map it is covering — you
+     end up editing a piece you cannot see. */
+  var rs = ele("div", "row");
+  [["Width","w"],["Depth","h"]].forEach(function(o){
+    var l = ele("label", "f size"); l.appendChild(ele("span", null, o[0]));
+    var i = document.createElement("input");
+    i.type = "text"; i.inputMode = "decimal";
+    i.value = fmtFeet(toFeet(p[o[1]]));
+    i.addEventListener("change", function(){
+      var ft = parseFeet(i.value);
+      if(ft === null){ i.value = fmtFeet(toFeet(p[o[1]])); return; }
+      p[o[1]] = clampSz(toUnits(ft));
+      i.value = fmtFeet(toFeet(p[o[1]]));      // show the clamped value back
+      markDirty(); drawPieces(sceneAt(viewIdx));
+    });
+    l.appendChild(i); rs.appendChild(l);
+  });
+
+  if(pl){
+    var lt = ele("label", "f size"); lt.appendChild(ele("span", null, "Turn"));
+    var it = document.createElement("input");
+    it.type = "text"; it.inputMode = "numeric";
+    it.value = normAngle(pl.r || 0) + "°";
+    it.addEventListener("change", function(){
+      var m = String(it.value).match(/-?[\d.]+/);
+      pl.r = m ? normAngle(parseFloat(m[0])) : 0;
+      it.value = pl.r + "°";
+      markDirty(); render();
+    });
+    lt.appendChild(it); rs.appendChild(lt);
+  }
+  pop.appendChild(rs);
+
+  if(pl){
+    pop.appendChild(ele("div", "help",
+      "Sizes are for the whole show. Drag the handle above the piece to turn it."));
+  }
+
   var r2 = ele("div", "row");
   if(pl){
-    r2.appendChild(mkbtn(pl.r ? "Turn upright" : "Turn 90°", "btn sm", function(){
-      pl.r = pl.r ? 0 : 90; markDirty(); render();
+    r2.appendChild(mkbtn("Straighten", "btn sm", function(){
+      pl.r = 0; markDirty(); render();
     }));
     /* Not "take it out of play" — a piece sitting in a wing is still
        in the show, it just does not move for this scene. Inheriting
@@ -1818,6 +2006,31 @@ function setupSheet(){
         S.show = i2.value; markDirty(); $("showname").textContent = S.show;
       });
       l2.appendChild(i2); r2.appendChild(l2); s2.appendChild(r2);
+
+      /* Every size in the show is measured against this one number, so
+         it is worth getting right once. Changing it moves nothing on
+         the plan — the same drawing is being measured against a
+         different stage, and every piece reads out differently. */
+      var rw = ele("div", "row");
+      var lw = ele("label", "f"); lw.appendChild(ele("span", null, "Stage width"));
+      var iw = document.createElement("input");
+      iw.type = "text"; iw.inputMode = "decimal"; iw.value = fmtFeet(stageFeet());
+      var wh = ele("div", "help");
+      function sayScale(){
+        wh.textContent = "Proscenium opening, wall to wall. That makes the stage "
+          + fmtFeet(stageFeet()) + " across and "
+          + fmtFeet(stageFeet() * ZONES.stage.h / ZONES.stage.w) + " deep.";
+      }
+      sayScale();
+      iw.addEventListener("change", function(){
+        var ft = parseFeet(iw.value);
+        if(ft !== null) S.stageFeet = Math.max(10, Math.min(200, ft));
+        iw.value = fmtFeet(stageFeet());
+        sayScale(); markDirty(); render();
+      });
+      lw.appendChild(iw); rw.appendChild(lw);
+      s2.appendChild(rw); s2.appendChild(wh);
+
       var r3 = ele("div", "row");
       r3.appendChild(mkbtn("Build the show", "btn on", function(){ close(); setMode("build"); }));
       r3.appendChild(mkbtn("Print run sheet", "btn", function(){
@@ -1899,9 +2112,15 @@ function buildSheet(){
       moves.forEach(function(m){
         var li = document.createElement("li");
         if(m.kind === "curtain"){ li.textContent = m.text + " — " + m.sub; ol.appendChild(li); return; }
-        var path = (m.from ? zoneLabel(m.from) : "off");
-        if(m.r && m.r.via.length) path += " → " + m.r.via.join(" → ");
-        path += " → " + (m.to ? zoneLabel(m.to) : "out of play");
+        var path;
+        if(m.kind === "turn"){
+          path = zoneLabel(m.to);
+        } else {
+          path = (m.from ? zoneLabel(m.from) : "off");
+          if(m.r && m.r.via.length) path += " → " + m.r.via.join(" → ");
+          path += " → " + (m.to ? zoneLabel(m.to) : "out of play");
+        }
+        if(m.turned) path += ", " + turnText(m.from, m.to);
         li.textContent = VERB[m.kind] + " " + m.piece.name + ": " + path
           + (m.to && m.to.note ? "  (" + m.to.note + ")" : "");
         ol.appendChild(li);
@@ -2189,7 +2408,13 @@ if(S.liveStamp && S.liveStamp !== lastSeen){
 window.GL = {
   get S(){ return S; },
   get view(){ return view; },
+  get viewIdx(){ return viewIdx; },
   pageSource: pageSource,
+  parseFeet: parseFeet,
+  fmtFeet: fmtFeet,
+  toFeet: toFeet,
+  toUnits: toUnits,
+  angleTo: angleTo,
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,

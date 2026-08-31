@@ -97,7 +97,13 @@ if(S.liveStamp && S.liveStamp !== lastSeen){
 window.GL = {
   get S(){ return S; },
   get view(){ return view; },
+  get viewIdx(){ return viewIdx; },
   pageSource: pageSource,
+  parseFeet: parseFeet,
+  fmtFeet: fmtFeet,
+  toFeet: toFeet,
+  toUnits: toUnits,
+  angleTo: angleTo,
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,

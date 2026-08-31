@@ -1,6 +1,7 @@
 {
   "rev": 6,
   "show": "Spring Production",
+  "stageFeet": 40,
   "liveIndex": 3,
   "liveStamp": 1787933485486,
   "pieces": [

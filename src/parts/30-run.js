@@ -167,12 +167,20 @@ function paintMoves(moves){
     nm.appendChild(document.createTextNode(m.piece.name));
     var path = ele("div", "path");
     function z(text, cls){ return ele("span", "z" + (cls ? " " + cls : ""), text); }
-    if(m.from) path.appendChild(z(zoneLabel(m.from)));
-    if(m.r && m.r.via.length) m.r.via.forEach(function(v){
-      path.appendChild(ele("span", "ar", "→")); path.appendChild(z(v, "via"));
-    });
-    if(m.from) path.appendChild(ele("span", "ar", "→"));
-    path.appendChild(z(m.to ? zoneLabel(m.to) : "Out of play"));
+    if(m.kind === "turn"){
+      path.appendChild(z(zoneLabel(m.to)));
+    } else {
+      if(m.from) path.appendChild(z(zoneLabel(m.from)));
+      if(m.r && m.r.via.length) m.r.via.forEach(function(v){
+        path.appendChild(ele("span", "ar", "→")); path.appendChild(z(v, "via"));
+      });
+      if(m.from) path.appendChild(ele("span", "ar", "→"));
+      path.appendChild(z(m.to ? zoneLabel(m.to) : "Out of play"));
+    }
+    if(m.turned){
+      path.appendChild(ele("span", "ar", "·"));
+      path.appendChild(z(turnText(m.from, m.to), "via"));
+    }
     tx.appendChild(nm); tx.appendChild(path);
     if(m.to && m.to.note) tx.appendChild(ele("div", "hint", m.to.note));
     d.appendChild(sw); d.appendChild(tx);

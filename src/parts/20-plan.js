@@ -131,7 +131,32 @@ function sizeLabels(){
   }
 }
 
-var GRIP = 9;               // grip square, in CSS px
+/* A piece is drawn at its true footprint and then turned, rather than
+   having its width and height swapped. Swapping only ever expressed
+   two angles; a flat pointing upstage at 30 degrees is a real thing a
+   set does. */
+function xform(x, y, r){
+  return "translate(" + x + "," + y + ")" + (r ? " rotate(" + r + ")" : "");
+}
+/* Height of the upright box a turned rectangle sits inside — where the
+   caption has to clear to. */
+function spanH(w, h, r){
+  var a = r * Math.PI / 180;
+  return Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
+}
+/* The caption stays upright while the piece turns, so a name is never
+   read sideways. Counter-rotating inside the turned group cancels the
+   turn for the text without moving the piece. */
+function setPieceTransform(g, x, y, r, w, h, capFS){
+  g.setAttribute("transform", xform(x, y, r));
+  var spin = g.querySelector(".upright");
+  if(!spin) return;
+  spin.setAttribute("transform", "rotate(" + (-r) + ")");
+  var t = spin.querySelector(".cap");
+  if(t) t.setAttribute("y", spanH(w, h, r)/2 + 4 + capFS);
+}
+
+var SPIN_ARM = 22;          // handle stand-off from the piece, in CSS px
 function drawPieces(scene){
   if(!pieceLayer) return;
   pieceLayer.innerHTML = ""; nodes = {};
@@ -155,27 +180,33 @@ function drawPieces(scene){
     if(!pl) return;
     var a = abs(pl); if(!a) return;
     var rot = pl.r || 0;
-    var w = rot ? p.h : p.w, hh = rot ? p.w : p.h;
+    var w = p.w, hh = p.h;
     var g = el("g", { class:"pc" + (selected===p.id ? " sel" : ""), "data-id":p.id,
-                      transform:"translate("+a.x+","+a.y+")" }, pieceLayer);
+                      transform:xform(a.x, a.y, rot) }, pieceLayer);
     var rx = Math.min(9, Math.min(w, hh) / 4);
     el("rect", { x:-w/2-5, y:-hh/2-5, width:w+10, height:hh+10, rx:rx+4, class:"halo" }, g);
     el("rect", { x:-w/2, y:-hh/2, width:w, height:hh, rx:rx, class:"body",
                  fill:p.color, stroke:"rgba(0,0,0,.4)" }, g);
+    if(pl.note) el("circle", { cx:w/2-6, cy:-hh/2+6, r:Math.max(3, 3.5*k), class:"note-dot" }, g);
+
+    var up = el("g", { class:"upright", transform:"rotate(" + (-rot) + ")" }, g);
     if(!named || named[p.id]){
-      var t = el("text", { x:0, y:hh/2+4+capFS, "text-anchor":"middle", class:"cap",
-                           "font-size":capFS, fill:"var(--ink)" }, g);
+      var t = el("text", { x:0, y:spanH(w,hh,rot)/2+4+capFS, "text-anchor":"middle",
+                           class:"cap", "font-size":capFS, fill:"var(--ink)" }, up);
       t.textContent = p.name;
     }
-    if(pl.note) el("circle", { cx:w/2-6, cy:-hh/2+6, r:Math.max(3, 3.5*k), class:"note-dot" }, g);
-    /* Resize by dragging the corner, so the crew never has to think
-       in plan units. Only the selected piece, only while building. */
+
+    /* One handle, and it only turns. Size is typed in the popover:
+       a grab handle that resizes sits exactly where a thumb lands
+       while panning, and a set piece that quietly changes size is
+       worse than one that is slightly awkward to resize. */
     if(mode === "build" && selected === p.id){
-      var gs = GRIP * k;
-      el("rect", { x:w/2-gs*1.6, y:hh/2-gs*1.6, width:gs*3.2, height:gs*3.2,
-                   class:"grip-hit", "data-grip":"1" }, g);
-      el("rect", { x:w/2-gs/2, y:hh/2-gs/2, width:gs, height:gs, rx:gs/4,
-                   class:"grip", "data-grip":"1" }, g);
+      var arm = SPIN_ARM * k, rad = 7 * k;
+      var top = -hh/2 - arm;
+      el("line", { x1:0, y1:-hh/2, x2:0, y2:top + rad, class:"spin-arm" }, g);
+      el("circle", { cx:0, cy:top, r:rad, class:"spin" }, g);
+      el("circle", { cx:0, cy:top, r:Math.max(rad*2.4, 22*k), class:"spin-hit",
+                     "data-spin":"1" }, g);
     }
     nodes[p.id] = g;
   });
@@ -207,6 +238,7 @@ function animateTransition(fromScene, toScene){
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(!fromScene || reduce){ setCurtain(toScene.curtain === "open", false); return; }
 
+  var capFS = Math.max(9, 11.5 * planScale());
   var tracks = [];
   moves.forEach(function(m){
     if(!m.piece || !m.r || m.r.pts.length < 2) return;
@@ -216,8 +248,14 @@ function animateTransition(fromScene, toScene){
       var dx = pts[i].x-pts[i-1].x, dy = pts[i].y-pts[i-1].y, len = Math.sqrt(dx*dx+dy*dy);
       segs.push({ a:pts[i-1], b:pts[i], len:len }); total += len;
     }
-    if(total < 1) return;
-    tracks.push({ g:g, segs:segs, total:total });
+    /* Turning counts as moving. A flat that only pivots travels no
+       distance, but the crew still has to go and turn it, so it gets a
+       track and the plan shows the turn. */
+    var r0 = (m.from && m.from.r) || 0, r1 = (m.to && m.to.r) || 0;
+    var spin = ((r1 - r0 + 540) % 360) - 180;   // shortest way round
+    if(total < 1 && !spin) return;
+    tracks.push({ g:g, segs:segs, total:total, r0:r0, spin:spin,
+                  w:m.piece.w, h:m.piece.h });
   });
   if(!tracks.length){
     setCurtain(fromScene.curtain === "open", false);
@@ -243,13 +281,13 @@ function animateTransition(fromScene, toScene){
         }
         acc += s.len;
       }
-      tr.g.setAttribute("transform", "translate("+pos.x+","+pos.y+")");
+      setPieceTransform(tr.g, pos.x, pos.y, tr.r0 + tr.spin*e, tr.w, tr.h, capFS);
     });
     if(k < 1) animRAF = requestAnimationFrame(step);
     else { animRAF = null; drawPieces(toScene); drawRoutes(moves); }
   }
   tracks.forEach(function(tr){
-    tr.g.setAttribute("transform", "translate("+tr.segs[0].a.x+","+tr.segs[0].a.y+")");
+    setPieceTransform(tr.g, tr.segs[0].a.x, tr.segs[0].a.y, tr.r0, tr.w, tr.h, capFS);
   });
   setCurtain(fromScene.curtain === "open", false);
   requestAnimationFrame(function(){
@@ -385,16 +423,17 @@ function onPointerDown(evt){
   var p = svgPoint(evt);
   if(!p){ render(); return; }
 
-  var onGrip = wasSelected && evt.target.getAttribute &&
-               evt.target.getAttribute("data-grip") === "1";
+  var onSpin = wasSelected && evt.target.getAttribute &&
+               evt.target.getAttribute("data-spin") === "1";
   var sc = sceneAt(viewIdx), pl = sc && sc.place[id];
   var c = pl ? abs(pl) : null;
-  drag = onGrip
-    ? { id:id, mode:"size", c:c }
+  var pc = pieceById(id);
+  drag = onSpin
+    ? { id:id, mode:"spin", c:c, w:(pc?pc.w:0), h:(pc?pc.h:0), capFS:Math.max(9, 11.5*planScale()) }
     : { id:id, mode:"move", ox: c ? c.x - p.x : 0, oy: c ? c.y - p.y : 0 };
 
   if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
-  if(!wasSelected) render();                  // first tap selects and draws the grip
+  if(!wasSelected) render();                  // first tap selects and draws the handle
   drag.g = nodes[drag.id] || null;
   if(drag.g) drag.g.classList.add("dragging");
   hidePop();
@@ -435,20 +474,30 @@ function onPointerMove(evt){
 
   if(!drag || !drag.g) return;
   var p = svgPoint(evt); if(!p) return;
-  if(drag.mode === "size"){
+  if(drag.mode === "spin"){
     if(!drag.c) return;
-    var pc = pieceById(drag.id); if(!pc) return;
     var sc = sceneAt(viewIdx), pl = sc && sc.place[drag.id];
-    var rot = (pl && pl.r) || 0;
-    var w = clampSz(Math.abs(p.x - drag.c.x) * 2);
-    var h = clampSz(Math.abs(p.y - drag.c.y) * 2);
-    pc.w = rot ? h : w; pc.h = rot ? w : h;
-    drawPieces(sc);
-    drag.g = nodes[drag.id] || null;
-    if(drag.g) drag.g.classList.add("dragging");
+    if(!pl) return;
+    pl.r = angleTo(drag.c, p);
+    setPieceTransform(drag.g, drag.c.x, drag.c.y, pl.r, drag.w, drag.h, drag.capFS);
     return;
   }
-  drag.g.setAttribute("transform", "translate("+(p.x+drag.ox)+","+(p.y+drag.oy)+")");
+  drag.g.setAttribute("transform", xform(p.x + drag.ox, p.y + drag.oy, 0));
+}
+
+/* The handle stands straight up from the piece, so the angle from the
+   piece to the finger is the angle to turn it to.
+
+   It snaps when it is nearly square. Most of a set is built to the
+   proscenium, and free rotation that cannot quite reach a clean 90 is
+   worse than no free rotation at all — but the snap is only a few
+   degrees wide, so a deliberate 37 stays 37. */
+var SNAP_EVERY = 15, SNAP_WITHIN = 4;
+function angleTo(centre, p){
+  var r = Math.atan2(p.y - centre.y, p.x - centre.x) * 180 / Math.PI + 90;
+  r = normAngle(r);
+  var near = Math.round(r / SNAP_EVERY) * SNAP_EVERY;
+  return normAngle(Math.abs(r - near) <= SNAP_WITHIN ? near : r);
 }
 
 function onPointerUp(evt){
@@ -456,7 +505,7 @@ function onPointerUp(evt){
   if(pinch && pointerList().length < 2){ pinch = null; redrawForWidth(); }
   if(pan && pan.id === evt.pointerId){ pan = null; redrawForWidth(); return; }
   if(!drag) return;
-  if(drag.mode === "size"){ drag = null; markDirty(); render(); return; }
+  if(drag.mode === "spin"){ drag = null; markDirty(); render(); return; }
 
   var p = svgPoint(evt);
   var sc = sceneAt(viewIdx);
@@ -487,4 +536,3 @@ function onWheel(evt){
   if(evt.preventDefault) evt.preventDefault();
   zoomAbout(pt.x, pt.y, evt.deltaY < 0 ? 1.18 : 1/1.18);
 }
-function clampSz(n){ return Math.round(Math.max(MINSZ, Math.min(MAXSZ, n))); }

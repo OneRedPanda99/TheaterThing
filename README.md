@@ -19,7 +19,10 @@ scenes.
   **aux stage off stage right only**. There is an upstage crossover.
 - **Move lists are computed, never typed.** Each scene stores where every piece sits.
   The change between two consecutive scenes is derived by diffing them, so the crew
-  list can never drift out of sync with the plan.
+  list can never drift out of sync with the plan. A piece that only pivots is called
+  as a **Turn**, not a reposition from a spot to the same spot.
+- **Everything is in feet.** Pieces are typed and read back in feet and inches, against
+  a stage whose real width you set once.
 - **Routes are physical.** A piece going from the aux stage to the stage animates
   *through* wing SR. Wing SR to wing SL goes around the upstage crossover, never across
   the stage.
@@ -97,9 +100,29 @@ top, the plan fills the middle, and the set pieces run along the bottom.
   what a stage manager changes on nearly every pass. Reorder and delete — rarer, and
   riskier — stay one tap further in.
 - Tap a piece and a popover opens **over the spot it is in**, carrying its zone
-  shortcuts, its crew note, and what to do with it this scene.
-- Size is dragged from a corner grip. Nobody has to think in plan units.
+  shortcuts, its crew note, its size, its angle, and what to do with it this scene.
+- **Size is typed, in feet.** `6`, `6'` and `6' 3"` all work, and a bare number is
+  feet. Nothing on the plan resizes by dragging: a resize handle sits exactly where a
+  thumb lands while panning, and a set piece that quietly changes size is worse than
+  one that takes a moment to resize. A size belongs to the piece, so it changes in
+  every scene at once.
+- **Turn is free, to any angle.** Drag the handle standing off the top of the selected
+  piece, or type the angle. It snaps when it is within four degrees of a multiple of
+  fifteen, because most of a set is built to the proscenium — but a deliberate 37
+  stays 37. An angle belongs to the placement, because the same sofa genuinely does
+  face different ways in different scenes.
 - Nothing is nested more than one tap deep.
+
+### Measurements
+
+The plan is drawn in its own units, and one number ties them to the real world: how
+wide the stage actually is, set under **Setup → Stage width** and stored with the show.
+The stage zone is 600 units across, so a foot is `600 / stage width` units.
+
+Changing it moves nothing on the plan. The same drawing is simply being measured
+against a different stage, and every piece reads out differently. The default is 40
+feet, which is what the bundled sample show is drawn to — at that scale its sofa is
+7' 10" and its chairs are 2' 3", which is about right for real furniture.
 
 ## Running it
 
@@ -158,9 +181,9 @@ npm ci
 npm test
 ```
 
-48 checks covering route derivation, move-list generation, the command deck's positional
-guarantees, build mode, backstage modes, failed-call handling, the print sheet, and the
-self-rebuild round trip.
+52 checks covering route derivation, move-list generation, the command deck's positional
+guarantees, build mode, feet parsing, free rotation and its snap, backstage modes,
+failed-call handling, the print sheet, and the self-rebuild round trip.
 
 They look for controls by **the words on them** rather than by class name, so a test
 breaks when the interface stops saying what it does — not when a selector is renamed.
