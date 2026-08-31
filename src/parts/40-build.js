@@ -3,8 +3,8 @@
 
    A separate screen, not a mode bleeding through the run screen.
    The plan fills it, the scenes run along the top, the set pieces
-   run along the bottom, and a tapped piece opens a popover over
-   the spot it is in. Nothing is nested more than one tap deep.
+   run along the bottom, and a tapped piece opens its inspector in
+   between. Nothing is nested more than one tap deep.
    =============================================================== */
 
 function setMode(m){
@@ -199,8 +199,11 @@ function newPieceSheet(){
   });
 }
 
-/* ---------------- the piece popover ---------------- */
-function hideInspector(){ $("inspector").innerHTML = ""; }
+/* ---------------- the piece inspector ---------------- */
+/* The piece whose note is being written, if any. Kept out here so a
+   render does not close the field mid-sentence. */
+var noteFor = null;
+function hideInspector(){ noteFor = null; $("inspector").innerHTML = ""; }
 
 /* The piece inspector is docked under the plan, not floated over it.
    Anchored to the piece it describes it read well on a laptop and was
@@ -211,6 +214,7 @@ function paintInspector(){
   host.innerHTML = "";
   host.classList.toggle("hide", mode !== "build" || !selected);
   if(mode !== "build" || !selected) return;
+  if(noteFor !== selected) noteFor = null;
   var sc = sceneAt(viewIdx), p = pieceById(selected);
   if(!p){ selected = null; return; }
   var pl = sc ? sc.place[selected] : null;
@@ -221,6 +225,23 @@ function paintInspector(){
   hd.appendChild(sw);
   hd.appendChild(ele("b", null, p.name));
   hd.appendChild(ele("span", "tag", zoneLabel(pl)));
+  /* A note gets written once per piece and then read by the crew in
+     the move list, so it does not earn a permanent row in the thing
+     sitting on top of the map. It rides in the header instead, lit
+     when there is something written. */
+  if(pl){
+    var has = !!(pl.note || "").trim();
+    var nb = mkbtn(has ? "Note •" : "Note", "btn sm" + (has ? " on" : ""), function(){
+      noteFor = (noteFor === selected) ? null : selected;
+      render();
+      if(noteFor){
+        var f = $("inspector").querySelector(".notebox input");
+        if(f) f.focus();
+      }
+    });
+    nb.title = has ? pl.note : "Add a note for the crew";
+    hd.appendChild(nb);
+  }
   hd.appendChild(mkbtn("✕", "btn sm", function(){ selected = null; render(); }));
   pop.appendChild(hd);
 
@@ -235,14 +256,17 @@ function paintInspector(){
   });
   pop.appendChild(seg);
 
-  var rn = ele("div", "row");
-  var ln = ele("label", "f"); ln.appendChild(ele("span", null, "Note for the crew"));
-  var inp = document.createElement("input"); inp.type = "text";
-  inp.value = pl ? (pl.note || "") : "";
-  inp.placeholder = "upstage of leg 2";
-  inp.disabled = !pl;
-  inp.addEventListener("input", function(){ if(pl){ pl.note = inp.value; markDirty(); } });
-  ln.appendChild(inp); rn.appendChild(ln); pop.appendChild(rn);
+  if(pl && noteFor === selected){
+    var rn = ele("div", "row notebox");
+    var ln = ele("label", "f"); ln.appendChild(ele("span", null, "Note for the crew"));
+    var inp = document.createElement("input"); inp.type = "text";
+    inp.value = pl.note || "";
+    inp.placeholder = "upstage of leg 2";
+    inp.addEventListener("input", function(){ pl.note = inp.value; markDirty(); });
+    ln.appendChild(inp); rn.appendChild(ln);
+    rn.appendChild(mkbtn("Done", "btn sm", function(){ noteFor = null; render(); }));
+    pop.appendChild(rn);
+  }
 
   /* Size is typed, not dragged. A resize handle on the plan sits right
      where a thumb lands, and a set piece that quietly changed size was
