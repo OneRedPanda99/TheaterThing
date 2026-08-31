@@ -29,13 +29,21 @@ var CROSS_Y = 50, CURTAIN_Y = 542;
    The main one is stored as `curtain` because that is what shows built
    before the other two called it, and renaming it would strand them. */
 var CURTAINS = [
-  { key:"curtain", name:"Main curtain", short:"MAIN",  y:542, cls:"main",  color:"var(--gel-rose)" },
-  { key:"mid",     name:"Mid curtain",  short:"MID",   y:330, cls:"mid",   color:"var(--gel-congo)" },
+  { key:"curtain", name:"Main curtain", short:"MAIN",  cls:"main",  color:"var(--gel-rose)" },
+  { key:"mid",     name:"Mid curtain",  short:"MID",   cls:"mid",   color:"var(--gel-congo)", ft:16 },
   /* cls is "sheer", not "scrim": .scrim is the modal backdrop, and a
      curtain sharing it means querySelector(".scrim") finds a rect on
      the plan — which the Escape handler then deletes. */
-  { key:"scrim",   name:"Scrim",        short:"SCRIM", y:170, cls:"sheer", color:"var(--gel-green)" }
+  { key:"scrim",   name:"Scrim",        short:"SCRIM", cls:"sheer", color:"var(--gel-green)", ft:8 }
 ];
+/* Where a line set hangs, in plan units. The main curtain is at the
+   proscenium by definition. The other two are measured downstage from
+   the back wall in feet, so they stay where they really hang if the
+   stage is rescaled — the drawing keeps its shape, so a foot of depth
+   scales with a foot of width. */
+function curtainY(c){
+  return c.ft === undefined ? CURTAIN_Y : ZONES.stage.y + toUnits(c.ft);
+}
 /* Anything not explicitly closed is open — a theatre with no mid
    curtain simply never closes one, and nothing is ever called for it. */
 function curtainAt(sc, key){ return (sc && sc[key] === "closed") ? "closed" : "open"; }

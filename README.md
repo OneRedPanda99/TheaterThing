@@ -17,7 +17,9 @@ scenes.
   than a vague side.
 - **Four locations**, matching one specific theatre: stage, wing SR, wing SL, and an
   **aux stage off stage right only**. There is an upstage crossover.
-- **Three line sets**: the main curtain at the proscenium, a mid curtain, and a scrim.
+- **Three line sets**, upstage to downstage: a scrim 8 feet off the back wall, a mid
+  curtain 16 feet off it, and the main curtain at the proscenium. The first two are
+  positioned in feet, so they stay where they really hang if the stage is rescaled.
   Each is tracked per scene and called by name. **Open** always means the audience can
   see the stage; **closed** means they cannot.
 - **Move lists are computed, never typed.** Each scene stores where every piece sits.
@@ -102,8 +104,12 @@ top, the plan fills the middle, and the set pieces run along the bottom.
 - The scene's **name, curtain and note** sit directly under the plan, because those are
   what a stage manager changes on nearly every pass. Reorder and delete — rarer, and
   riskier — stay one tap further in.
-- Tap a piece and a popover opens **over the spot it is in**, carrying its zone
-  shortcuts, its crew note, its size, its angle, and what to do with it this scene.
+- Tap a piece and its inspector **docks under the plan**, carrying its zone shortcuts,
+  its crew note, its size, its angle, and what to do with it this scene. It replaces the
+  scene strip while it is open, so only one of them is ever competing with the map.
+  Anchoring it to the piece read well on a laptop and was useless on a phone: the form
+  is taller than the strip of map it covered, so you were editing something you could
+  no longer see.
 - **Size is typed, in feet.** `6`, `6'` and `6' 3"` all work, and a bare number is
   feet. Nothing on the plan resizes by dragging: a resize handle sits exactly where a
   thumb lands while panning, and a set piece that quietly changes size is worse than

@@ -91,14 +91,15 @@ function buildPlan(){
      left end so the crew can tell which one is being called. */
   curtains = {};
   CURTAINS.forEach(function(c){
-    el("line", { x1:st.x-8, y1:c.y, x2:st.x+st.w+8, y2:c.y, class:"curtain-rod" }, svg);
+    var y = curtainY(c);
+    el("line", { x1:st.x-8, y1:y, x2:st.x+st.w+8, y2:y, class:"curtain-rod" }, svg);
     curtains[c.key] = {
-      L: el("rect", { x:st.x, y:c.y-5, width:st.w/2, height:10,
+      L: el("rect", { x:st.x, y:y-5, width:st.w/2, height:10,
                       class:"curtain " + c.cls }, svg),
-      R: el("rect", { x:st.x+st.w/2, y:c.y-5, width:st.w/2, height:10,
+      R: el("rect", { x:st.x+st.w/2, y:y-5, width:st.w/2, height:10,
                       class:"curtain " + c.cls }, svg)
     };
-    label(el("text", { x:st.x+st.w-8, y:c.y-7, "text-anchor":"end", class:"grid-tag" }, svg), 9)
+    label(el("text", { x:st.x+st.w-8, y:y-7, "text-anchor":"end", class:"grid-tag" }, svg), 9)
       .textContent = c.short;
   });
 
@@ -453,7 +454,7 @@ function onPointerDown(evt){
   if(!wasSelected) render();                  // first tap selects and draws the handle
   drag.g = nodes[drag.id] || null;
   if(drag.g) drag.g.classList.add("dragging");
-  hidePop();
+  hideInspector();
   if(evt.preventDefault) evt.preventDefault();
 }
 
