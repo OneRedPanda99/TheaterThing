@@ -141,16 +141,17 @@ function newPieceSheet(){
   var name = "", w = "", h = "";
   modal("Add a set piece", function(body, close){
     body.appendChild(ele("div", "help",
-      "Size is a rough footprint on the plan. Drop it in, then drag its corner to match the real thing."));
+      "Its footprint on the deck, in feet. 6, 6' and 6' 3\" all work; a bare "
+      + "number is feet. Measured against a " + fmtFeet(stageFeet()) + " wide stage."));
     var r1 = ele("div", "row");
     var l1 = ele("label", "f"); l1.appendChild(ele("span", null, "Name"));
     var i1 = document.createElement("input"); i1.type = "text"; i1.placeholder = "Kitchen table";
     l1.appendChild(i1); r1.appendChild(l1); body.appendChild(r1);
     var r2 = ele("div", "row");
-    [["Width", 80], ["Depth", 45]].forEach(function(o){
+    [["Width", "5'"], ["Depth", "3'"]].forEach(function(o){
       var l = ele("label", "f"); l.appendChild(ele("span", null, o[0]));
-      var i = document.createElement("input"); i.type = "text"; i.inputMode = "numeric";
-      i.placeholder = String(o[1]); i.dataset.k = o[0];
+      var i = document.createElement("input"); i.type = "text"; i.inputMode = "decimal";
+      i.placeholder = o[1];
       l.appendChild(i); r2.appendChild(l);
     });
     body.appendChild(r2);
@@ -160,8 +161,9 @@ function newPieceSheet(){
       name = i1.value.trim();
       if(!name){ toast("Give the piece a name first."); i1.focus(); return; }
       var ins = r2.querySelectorAll("input");
-      w = clampSz(parseInt(ins[0].value, 10) || 80);
-      h = clampSz(parseInt(ins[1].value, 10) || 45);
+      var wf = parseFeet(ins[0].value), hf = parseFeet(ins[1].value);
+      w = clampSz(toUnits(wf === null ? 5 : wf));
+      h = clampSz(toUnits(hf === null ? 3 : hf));
       var p = { id:"p"+Date.now(), name:name, w:w, h:h,
                 color: PALETTE[S.pieces.length % PALETTE.length] };
       S.pieces.push(p);
@@ -216,10 +218,57 @@ function paintPop(){
   inp.addEventListener("input", function(){ if(pl){ pl.note = inp.value; markDirty(); } });
   ln.appendChild(inp); rn.appendChild(ln); pop.appendChild(rn);
 
+  /* Size is typed, not dragged. A resize handle on the plan sits right
+     where a thumb lands, and a set piece that quietly changed size was
+     the thing that kept going wrong.
+
+     A size belongs to the piece, not to this placement — a sofa is one
+     sofa in every scene — so a change here changes it everywhere, on
+     purpose. The angle belongs to the placement, because the same sofa
+     genuinely does face different ways in different scenes. */
+  /* All three on one line. The popover floats over the plan, and on a
+     phone a stacked form is taller than the map it is covering — you
+     end up editing a piece you cannot see. */
+  var rs = ele("div", "row");
+  [["Width","w"],["Depth","h"]].forEach(function(o){
+    var l = ele("label", "f size"); l.appendChild(ele("span", null, o[0]));
+    var i = document.createElement("input");
+    i.type = "text"; i.inputMode = "decimal";
+    i.value = fmtFeet(toFeet(p[o[1]]));
+    i.addEventListener("change", function(){
+      var ft = parseFeet(i.value);
+      if(ft === null){ i.value = fmtFeet(toFeet(p[o[1]])); return; }
+      p[o[1]] = clampSz(toUnits(ft));
+      i.value = fmtFeet(toFeet(p[o[1]]));      // show the clamped value back
+      markDirty(); drawPieces(sceneAt(viewIdx));
+    });
+    l.appendChild(i); rs.appendChild(l);
+  });
+
+  if(pl){
+    var lt = ele("label", "f size"); lt.appendChild(ele("span", null, "Turn"));
+    var it = document.createElement("input");
+    it.type = "text"; it.inputMode = "numeric";
+    it.value = normAngle(pl.r || 0) + "°";
+    it.addEventListener("change", function(){
+      var m = String(it.value).match(/-?[\d.]+/);
+      pl.r = m ? normAngle(parseFloat(m[0])) : 0;
+      it.value = pl.r + "°";
+      markDirty(); render();
+    });
+    lt.appendChild(it); rs.appendChild(lt);
+  }
+  pop.appendChild(rs);
+
+  if(pl){
+    pop.appendChild(ele("div", "help",
+      "Sizes are for the whole show. Drag the handle above the piece to turn it."));
+  }
+
   var r2 = ele("div", "row");
   if(pl){
-    r2.appendChild(mkbtn(pl.r ? "Turn upright" : "Turn 90°", "btn sm", function(){
-      pl.r = pl.r ? 0 : 90; markDirty(); render();
+    r2.appendChild(mkbtn("Straighten", "btn sm", function(){
+      pl.r = 0; markDirty(); render();
     }));
     /* Not "take it out of play" — a piece sitting in a wing is still
        in the show, it just does not move for this scene. Inheriting
@@ -368,6 +417,31 @@ function setupSheet(){
         S.show = i2.value; markDirty(); $("showname").textContent = S.show;
       });
       l2.appendChild(i2); r2.appendChild(l2); s2.appendChild(r2);
+
+      /* Every size in the show is measured against this one number, so
+         it is worth getting right once. Changing it moves nothing on
+         the plan — the same drawing is being measured against a
+         different stage, and every piece reads out differently. */
+      var rw = ele("div", "row");
+      var lw = ele("label", "f"); lw.appendChild(ele("span", null, "Stage width"));
+      var iw = document.createElement("input");
+      iw.type = "text"; iw.inputMode = "decimal"; iw.value = fmtFeet(stageFeet());
+      var wh = ele("div", "help");
+      function sayScale(){
+        wh.textContent = "Proscenium opening, wall to wall. That makes the stage "
+          + fmtFeet(stageFeet()) + " across and "
+          + fmtFeet(stageFeet() * ZONES.stage.h / ZONES.stage.w) + " deep.";
+      }
+      sayScale();
+      iw.addEventListener("change", function(){
+        var ft = parseFeet(iw.value);
+        if(ft !== null) S.stageFeet = Math.max(10, Math.min(200, ft));
+        iw.value = fmtFeet(stageFeet());
+        sayScale(); markDirty(); render();
+      });
+      lw.appendChild(iw); rw.appendChild(lw);
+      s2.appendChild(rw); s2.appendChild(wh);
+
       var r3 = ele("div", "row");
       r3.appendChild(mkbtn("Build the show", "btn on", function(){ close(); setMode("build"); }));
       r3.appendChild(mkbtn("Print run sheet", "btn", function(){
@@ -449,9 +523,15 @@ function buildSheet(){
       moves.forEach(function(m){
         var li = document.createElement("li");
         if(m.kind === "curtain"){ li.textContent = m.text + " — " + m.sub; ol.appendChild(li); return; }
-        var path = (m.from ? zoneLabel(m.from) : "off");
-        if(m.r && m.r.via.length) path += " → " + m.r.via.join(" → ");
-        path += " → " + (m.to ? zoneLabel(m.to) : "out of play");
+        var path;
+        if(m.kind === "turn"){
+          path = zoneLabel(m.to);
+        } else {
+          path = (m.from ? zoneLabel(m.from) : "off");
+          if(m.r && m.r.via.length) path += " → " + m.r.via.join(" → ");
+          path += " → " + (m.to ? zoneLabel(m.to) : "out of play");
+        }
+        if(m.turned) path += ", " + turnText(m.from, m.to);
         li.textContent = VERB[m.kind] + " " + m.piece.name + ": " + path
           + (m.to && m.to.note ? "  (" + m.to.note + ")" : "");
         ol.appendChild(li);

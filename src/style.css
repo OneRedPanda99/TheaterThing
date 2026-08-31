@@ -173,11 +173,15 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none}
 body.mode-build .pc{cursor:grab}
 .pc.dragging{cursor:grabbing}
 .pc.dragging .body{stroke:var(--work);stroke-width:3}
-/* Corner grip, build mode, selected piece only: drag it to resize.
-   The visible square stays small so it does not hide the piece; a
-   transparent square under it gives the thumb something to hit. */
-.grip{fill:var(--work);stroke:var(--work-ink);stroke-width:1.5;cursor:nwse-resize}
-.grip-hit{fill:transparent;cursor:nwse-resize}
+/* Turn handle, build mode, selected piece only. It stands off the
+   piece on an arm so it is never confused with the piece itself, and
+   the transparent circle under it gives a thumb something to hit
+   without covering what is being turned. Nothing on the plan resizes:
+   size is typed in the popover. */
+.spin{fill:var(--work);stroke:var(--work-ink);stroke-width:1.5;cursor:grab}
+.spin-hit{fill:transparent;cursor:grab}
+.spin-arm{stroke:var(--work);stroke-width:1.5;stroke-dasharray:3 3;opacity:.8}
+.pc.dragging .spin{cursor:grabbing}
 
 /* ---------------- the sheet (phone) ----------------
    Height is animated on purpose, and transform is not a substitute.
@@ -268,6 +272,18 @@ body.mode-build .pc{cursor:grab}
 .pop .hd{display:flex;align-items:center;gap:8px;margin-bottom:9px}
 .pop .hd .sw{width:13px;height:13px;border-radius:3px;flex:none}
 .pop .hd b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Compact inside the popover: it floats over the map it is editing, so
+   every row it does not need is map you can still see. Input font-size
+   stays at 16px — anything smaller makes iOS zoom the page on focus. */
+.pop{max-height:calc(100% - 20px);overflow:auto;padding:11px}
+.pop .row{gap:6px}
+.pop .row + .row{margin-top:7px}
+.pop input{padding:7px 9px}
+.pop .help{margin-top:7px;font-size:11.5px}
+.pop .seg button{min-height:40px;padding:8px 6px;font-size:12.5px}
+.pop .btn.sm{min-height:36px}
+label.f.size{flex:1 1 64px}
+label.f.size > span{white-space:nowrap}
 
 /* ---------------- deck ---------------- */
 /* Fitts's law: the primary target sits ON the bottom edge, is the

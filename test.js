@@ -223,9 +223,64 @@ setTimeout(async () => {
     if (!pop) throw new Error("no popover");
     if (!byText("Wing SR", "button", pop)) throw new Error("no zone shortcut");
   });
-  step("size is dragged from a corner grip, never typed", () => {
-    if (d.querySelector('input[type="number"]')) throw new Error("still asking for numbers");
-    if (!d.querySelector(".pc.sel .grip")) throw new Error("no resize grip on the selected piece");
+  step("nothing on the plan resizes — the only handle turns", () => {
+    if (d.querySelector(".pc.sel .grip, .pc.sel .grip-hit"))
+      throw new Error("a resize grip is still on the plan");
+    if (!d.querySelector(".pc.sel .spin")) throw new Error("no turn handle on the selected piece");
+    if (d.querySelectorAll(".pc:not(.sel) .spin").length)
+      throw new Error("unselected pieces carry a handle too");
+  });
+  step("size is typed in feet, and reads back in feet and inches", () => {
+    const pop = d.querySelector("#pophost .pop");
+    const wf = [...pop.querySelectorAll("input")].find(
+      i => i.previousSibling && /Width/.test(i.previousSibling.textContent));
+    if (!wf) throw new Error("no width field");
+    if (!/^\d+'( \d+")?$/.test(wf.value)) throw new Error("width reads " + wf.value);
+    const id = d.querySelector(".pc.sel").getAttribute("data-id");
+    wf.value = "6'6\"";
+    wf.dispatchEvent(new w.Event("change"));
+    const piece = w.GL.S.pieces.find(p => p.id === id);
+    if (w.GL.fmtFeet(w.GL.toFeet(piece.w)) !== "6' 6\"")
+      throw new Error("stored " + w.GL.fmtFeet(w.GL.toFeet(piece.w)));
+    if (wf.value !== "6' 6\"") throw new Error("field shows " + wf.value);
+  });
+  step("feet are read the way a person types them", () => {
+    const P = w.GL.parseFeet, F = w.GL.fmtFeet;
+    [["8", 8], ["8'", 8], ["8'6", 8.5], ["8'6\"", 8.5], ["18\"", 1.5],
+     ["8.5", 8.5], ["6 ft 3 in", 6.25]].forEach(([raw, want]) => {
+      if (Math.abs(P(raw) - want) > 1e-9) throw new Error(raw + " read as " + P(raw));
+    });
+    if (P("") !== null || P("abc") !== null) throw new Error("nonsense should not parse");
+    if (F(8.5) !== "8' 6\"" || F(8) !== "8'" || F(0.5) !== "6\"")
+      throw new Error("formatted " + F(8.5) + " / " + F(8) + " / " + F(0.5));
+  });
+  step("a piece turns to any angle, and snaps only when it is nearly square", () => {
+    const A = w.GL.angleTo, c = { x: 0, y: 0 };
+    if (A(c, { x: 0, y: -10 }) !== 0) throw new Error("handle straight up is not 0");
+    if (A(c, { x: 10, y: 0 }) !== 90) throw new Error("handle to the right is not 90");
+    if (A(c, { x: 0, y: 10 }) !== 180) throw new Error("handle down is not 180");
+    // 37 degrees is a deliberate angle and must survive
+    const p37 = { x: Math.sin(37 * Math.PI / 180), y: -Math.cos(37 * Math.PI / 180) };
+    if (A(c, p37) !== 37) throw new Error("37 was pulled to " + A(c, p37));
+    // 44 is within the snap window of 45
+    const p44 = { x: Math.sin(44 * Math.PI / 180), y: -Math.cos(44 * Math.PI / 180) };
+    if (A(c, p44) !== 45) throw new Error("44 did not snap to 45, got " + A(c, p44));
+  });
+  step("the turn field takes a typed angle and Straighten clears it", () => {
+    const pop = d.querySelector("#pophost .pop");
+    const t = [...pop.querySelectorAll("input")].find(
+      i => i.previousSibling && /Turn/.test(i.previousSibling.textContent));
+    if (!t) throw new Error("no turn field");
+    const id = d.querySelector(".pc.sel").getAttribute("data-id");
+    t.value = "30";
+    t.dispatchEvent(new w.Event("change"));
+    const sc = w.GL.S.scenes[w.GL.viewIdx];
+    if (!sc.place[id] || sc.place[id].r !== 30)
+      throw new Error("stored " + (sc.place[id] && sc.place[id].r));
+    if (!/rotate\(30\)/.test(d.querySelector('.pc[data-id="' + id + '"]').getAttribute("transform")))
+      throw new Error("the plan did not turn it");
+    need("Straighten", "button", d.querySelector("#pophost .pop")).click();
+    if (sc.place[id].r !== 0) throw new Error("Straighten left it at " + sc.place[id].r);
   });
   step("one tap sends a piece to the aux stage", () => {
     const pop = d.querySelector("#pophost .pop");
