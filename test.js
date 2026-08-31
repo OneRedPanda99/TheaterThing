@@ -52,6 +52,20 @@ function openBuild() {
   d.getElementById("btn-setup").click();
   need("Build the show").click();
 }
+/* The piece menu is a sheet now, opened from the handle beside the
+   piece. Tests that exercise its contents have to ask for it. */
+function pieceMenu() {
+  const open = d.querySelector(".modal .insp");
+  if (open) return open;
+  w.GL.pieceMenu();
+  const pop = d.querySelector(".modal .insp");
+  if (!pop) throw new Error("the piece menu did not open");
+  return pop;
+}
+function closeMenu() {
+  const scrim = d.querySelector(".scrim");
+  if (scrim) scrim.remove();
+}
 function goToScene(i) {
   if (!d.querySelector("#scenebar .chip")) openBuild();
   sceneChips()[i].click();
@@ -225,29 +239,29 @@ setTimeout(async () => {
     if ([...chips].some(c => c.classList.contains("out")))
       throw new Error("every piece is in this scene, none should read as absent");
   });
-  step("tapping a piece opens its inspector, docked clear of the plan", () => {
+  step("selecting a piece costs the map nothing", () => {
     goToScene(1);
     d.querySelector("#tray .pchip:not(.add)").click();
-    const pop = d.querySelector("#inspector .insp");
-    if (!pop) throw new Error("no inspector");
-    if (!byText("Wing SR", "button", pop)) throw new Error("no zone shortcut");
+    if (d.querySelector(".modal")) throw new Error("a sheet opened uninvited");
+    if (!d.getElementById("scenestrip").querySelector("input"))
+      throw new Error("the scene strip was pushed aside");
+    if (!d.querySelector(".pc.sel")) throw new Error("nothing selected");
   });
-  step("the crew note is behind a tap, not taking a row of the map", () => {
-    const insp = d.querySelector("#inspector .insp");
-    if (insp.querySelector(".notebox")) throw new Error("note field is open by default");
-    const nb = need("Note", "button", insp);
-    nb.click();
-    const box = d.querySelector("#inspector .notebox input");
-    if (!box) throw new Error("tapping Note did not open the field");
-    box.value = "upstage of leg 2";
-    box.dispatchEvent(new w.Event("input"));
-    const id = d.querySelector(".pc.sel").getAttribute("data-id");
-    if (w.GL.S.scenes[w.GL.viewIdx].place[id].note !== "upstage of leg 2")
-      throw new Error("note not saved");
-    need("Done", "button", d.querySelector("#inspector .notebox")).click();
-    if (d.querySelector("#inspector .notebox")) throw new Error("Done did not close it");
-    if (!/Note/.test(need("Note", "button", d.querySelector("#inspector .insp")).textContent))
-      throw new Error("no way back into the note");
+  step("the piece carries two handles: one turns, one opens the menu", () => {
+    if (!d.querySelector(".pc.sel .spin")) throw new Error("no turn handle");
+    if (!d.querySelector(".pc.sel .menu-btn")) throw new Error("no menu handle");
+    if (d.querySelectorAll(".pc:not(.sel) .menu-btn").length)
+      throw new Error("unselected pieces carry handles too");
+    if (!d.querySelector(".pc.sel .upright .menu"))
+      throw new Error("the menu handle turns with the piece instead of staying upright");
+  });
+  step("the handle opens the piece menu, with everything in it", () => {
+    w.GL.pieceMenu();
+    const pop = d.querySelector(".modal .insp");
+    if (!pop) throw new Error("no piece menu");
+    if (!byText("Wing SR", "button", pop)) throw new Error("no zone shortcut");
+    if (!byText("Note for the crew", "label", pop)) throw new Error("no note field");
+    if (!byText("Straighten", "button", pop)) throw new Error("no straighten");
   });
   step("nothing on the plan resizes — the only handle turns", () => {
     if (d.querySelector(".pc.sel .grip, .pc.sel .grip-hit"))
@@ -257,7 +271,7 @@ setTimeout(async () => {
       throw new Error("unselected pieces carry a handle too");
   });
   step("size is typed in feet, and reads back in feet and inches", () => {
-    const pop = d.querySelector("#inspector .insp");
+    const pop = pieceMenu();
     const wf = [...pop.querySelectorAll("input")].find(
       i => i.previousSibling && /Width/.test(i.previousSibling.textContent));
     if (!wf) throw new Error("no width field");
@@ -293,8 +307,7 @@ setTimeout(async () => {
     if (A(c, p44) !== 45) throw new Error("44 did not snap to 45, got " + A(c, p44));
   });
   step("the turn field takes a typed angle and Straighten clears it", () => {
-    const pop = d.querySelector("#inspector .insp");
-    const t = [...pop.querySelectorAll("input")].find(
+    const pop = pieceMenu();    const t = [...pop.querySelectorAll("input")].find(
       i => i.previousSibling && /Turn/.test(i.previousSibling.textContent));
     if (!t) throw new Error("no turn field");
     const id = d.querySelector(".pc.sel").getAttribute("data-id");
@@ -305,18 +318,18 @@ setTimeout(async () => {
       throw new Error("stored " + (sc.place[id] && sc.place[id].r));
     if (!/rotate\(30\)/.test(d.querySelector('.pc[data-id="' + id + '"]').getAttribute("transform")))
       throw new Error("the plan did not turn it");
-    need("Straighten", "button", d.querySelector("#inspector .insp")).click();
+    need("Straighten", "button", pieceMenu()).click();
     if (sc.place[id].r !== 0) throw new Error("Straighten left it at " + sc.place[id].r);
   });
   step("one tap sends a piece to the aux stage", () => {
-    const pop = d.querySelector("#inspector .insp");
-    need("Aux", "button", pop).click();
+    const pop = d.querySelector(".modal .insp");
+    need("Aux", "button", pieceMenu()).click();
     const state = JSON.parse(d.getElementById("state").textContent);
     const id = d.querySelector(".pc.sel").getAttribute("data-id");
     // read the drawn plan, not #state — that is the last published snapshot
     if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("piece vanished");
-    if (!/Aux stage/.test(d.querySelector("#inspector .insp .tag").textContent))
-      throw new Error("popover still says " + d.querySelector("#inspector .insp .tag").textContent);
+    if (!/Aux stage/.test(d.querySelector(".modal .insp .tag").textContent))
+      throw new Error("popover still says " + d.querySelector(".modal .insp .tag").textContent);
     if (state.scenes.length !== 5) throw new Error("state unexpectedly changed");
   });
   step("all three line sets are tracked, and each is called by name", () => {
@@ -350,16 +363,16 @@ setTimeout(async () => {
       throw new Error("a curtain uses .scrim, which is the modal backdrop class");
   });
   step("a piece that does not move stays put instead of vanishing", () => {
-    need("Same as last scene", "button", d.querySelector("#inspector .insp")).click();
+    need("Same as last scene", "button", pieceMenu()).click();
     if (!d.querySelector(".pc.sel")) throw new Error("piece left the scene");
   });
   step("striking a piece takes it off the plan and greys its tray chip", () => {
     const id = d.querySelector(".pc.sel").getAttribute("data-id");
-    need("Off for this scene", "button", d.querySelector("#inspector .insp")).click();
+    need("Off for this scene", "button", pieceMenu()).click();
     if (d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("still drawn");
     const chip = [...d.querySelectorAll("#tray .pchip")].find(c => c.classList.contains("out"));
     if (!chip) throw new Error("tray does not show it is out of this scene");
-    need("Bring into this scene", "button", d.querySelector("#inspector .insp")).click();
+    need("Bring into this scene", "button", pieceMenu()).click();
     if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("could not bring it back");
   });
   step("editing does not publish — it goes to Save & sync", () => {
@@ -391,7 +404,7 @@ setTimeout(async () => {
     m.querySelector("input").value = "Ladder";
     need("Add piece", "button", m).click();
     if (!w.GL.S.pieces.some(p => p.name === "Ladder")) throw new Error("not added");
-    if (!d.querySelector("#inspector .insp")) throw new Error("new piece is not selected and shown");
+    if (!d.querySelector(".pc.sel")) throw new Error("new piece is not selected on the plan");
   });
   step("leaving build puts the run screen back", () => {
     d.getElementById("btn-setup").click();

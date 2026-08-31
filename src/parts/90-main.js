@@ -12,7 +12,6 @@ function render(){
   paintMoves(moves);
   paintNote();
   paintSceneStrip();
-  paintInspector();
   paintTray();
   paintDeck();
   drawPieces(sc);
@@ -110,6 +109,7 @@ window.GL = {
   buildSheet: buildSheet,
   callScene: callScene,
   render: render,
+  pieceMenu: pieceMenu,
   select: function(id){ selected = id; render(); },
   setApi: function(a){ api = a; apiState = a ? "live" : "local"; syncChip(); }
 };

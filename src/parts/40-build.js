@@ -11,7 +11,6 @@ function setMode(m){
   if(m === "build" && !isSM()){ toast("Only the stage manager can build the show."); return; }
   mode = m;
   selected = null;
-  hideInspector();
   render();
   /* The pane under the plan changes size between the two screens, so
      the map has to be re-clamped to the box it now has. */
@@ -82,10 +81,7 @@ function moveScene(dir){
    delete. */
 function paintSceneStrip(){
   var strip = $("scenestrip");
-  /* One at a time. A selected piece and the scene it sits in are two
-     different jobs, and stacking both under the plan leaves no plan. */
-  strip.classList.toggle("hide", mode === "build" && !!selected);
-  if(mode !== "build" || selected){ strip.innerHTML = ""; return; }
+  if(mode !== "build"){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
   if(!sc) return;
@@ -199,137 +195,114 @@ function newPieceSheet(){
   });
 }
 
-/* ---------------- the piece inspector ---------------- */
-/* The piece whose note is being written, if any. Kept out here so a
-   render does not close the field mid-sentence. */
-var noteFor = null;
-function hideInspector(){ noteFor = null; $("inspector").innerHTML = ""; }
-
-/* The piece inspector is docked under the plan, not floated over it.
-   Anchored to the piece it describes it read well on a laptop and was
-   useless on a phone: the form is taller than the strip of map it was
-   covering, so you were editing something you could no longer see. */
-function paintInspector(){
-  var host = $("inspector");
-  host.innerHTML = "";
-  host.classList.toggle("hide", mode !== "build" || !selected);
-  if(mode !== "build" || !selected) return;
-  if(noteFor !== selected) noteFor = null;
+/* ---------------- the piece menu ----------------
+   Opened from the small handle beside a selected piece, and shown as
+   a sheet over everything. It was tried two other ways first: floated
+   next to the piece, where the form was taller than the strip of map
+   it covered; and docked under the plan, where it shrank the map every
+   time you touched a piece. Both were worse than a sheet you asked for
+   and can dismiss, which costs the map nothing until you open it. */
+function pieceMenu(){
   var sc = sceneAt(viewIdx), p = pieceById(selected);
-  if(!p){ selected = null; return; }
+  if(!p) return;
   var pl = sc ? sc.place[selected] : null;
 
-  var pop = ele("div", "insp");
-  var hd = ele("div", "hd");
-  var sw = ele("div", "sw"); sw.style.background = p.color;
-  hd.appendChild(sw);
-  hd.appendChild(ele("b", null, p.name));
-  hd.appendChild(ele("span", "tag", zoneLabel(pl)));
-  /* A note gets written once per piece and then read by the crew in
-     the move list, so it does not earn a permanent row in the thing
-     sitting on top of the map. It rides in the header instead, lit
-     when there is something written. */
-  if(pl){
-    var has = !!(pl.note || "").trim();
-    var nb = mkbtn(has ? "Note •" : "Note", "btn sm" + (has ? " on" : ""), function(){
-      noteFor = (noteFor === selected) ? null : selected;
-      render();
-      if(noteFor){
-        var f = $("inspector").querySelector(".notebox input");
-        if(f) f.focus();
-      }
-    });
-    nb.title = has ? pl.note : "Add a note for the crew";
-    hd.appendChild(nb);
-  }
-  hd.appendChild(mkbtn("✕", "btn sm", function(){ selected = null; render(); }));
-  pop.appendChild(hd);
+  modal(p.name, function(body, close){
+    var pop = ele("div", "insp");
 
-  /* Send it somewhere without dragging. On a phone this is the fast
-     path: the director says "put the bench on the aux stage" and it
-     is one tap, not a drag across a zoomed map. */
-  var seg = ele("div", "seg");
-  [["stage","Stage"],["wingSR","Wing SR"],["wingSL","Wing SL"],["aux","Aux"]].forEach(function(o){
-    var b = ele("button", pl && pl.zone === o[0] ? "on" : null, o[1]);
-    b.addEventListener("click", function(){ sendToZone(o[0]); });
-    seg.appendChild(b);
+    var hd = ele("div", "hd");
+    var sw = ele("div", "sw"); sw.style.background = p.color;
+    hd.appendChild(sw);
+    hd.appendChild(ele("span", "tag", zoneLabel(pl)));
+    pop.appendChild(hd);
+
+    /* Send it somewhere without dragging. On a phone this is the fast
+       path: the director says "put the bench on the aux stage" and it
+       is one tap, not a drag across a zoomed map. */
+    var seg = ele("div", "seg");
+    [["stage","Stage"],["wingSR","Wing SR"],["wingSL","Wing SL"],["aux","Aux"]].forEach(function(o){
+      var b = ele("button", pl && pl.zone === o[0] ? "on" : null, o[1]);
+      b.addEventListener("click", function(){ sendToZone(o[0]); close(); pieceMenu(); });
+      seg.appendChild(b);
+    });
+    pop.appendChild(seg);
+
+    if(pl){
+      var rn = ele("div", "row notebox");
+      var ln = ele("label", "f"); ln.appendChild(ele("span", null, "Note for the crew"));
+      var inp = document.createElement("input"); inp.type = "text";
+      inp.value = pl.note || "";
+      inp.placeholder = "upstage of leg 2";
+      inp.addEventListener("input", function(){ pl.note = inp.value; markDirty(); });
+      ln.appendChild(inp); rn.appendChild(ln); pop.appendChild(rn);
+    }
+
+    /* Size is typed, not dragged: a resize handle on the plan sits right
+       where a thumb lands, and a set piece that quietly changed size was
+       the thing that kept going wrong.
+
+       A size belongs to the piece, not to this placement — a sofa is one
+       sofa in every scene — so a change here changes it everywhere, on
+       purpose. The angle belongs to the placement, because the same sofa
+       genuinely does face different ways in different scenes. */
+    var rs = ele("div", "row");
+    [["Width","w"],["Depth","h"]].forEach(function(o){
+      var l = ele("label", "f size"); l.appendChild(ele("span", null, o[0]));
+      var i = document.createElement("input");
+      i.type = "text"; i.inputMode = "decimal";
+      i.value = fmtFeet(toFeet(p[o[1]]));
+      i.addEventListener("change", function(){
+        var ft = parseFeet(i.value);
+        if(ft === null){ i.value = fmtFeet(toFeet(p[o[1]])); return; }
+        p[o[1]] = clampSz(toUnits(ft));
+        i.value = fmtFeet(toFeet(p[o[1]]));      // show the clamped value back
+        markDirty(); drawPieces(sceneAt(viewIdx));
+      });
+      l.appendChild(i); rs.appendChild(l);
+    });
+    if(pl){
+      var lt = ele("label", "f size"); lt.appendChild(ele("span", null, "Turn"));
+      var it = document.createElement("input");
+      it.type = "text"; it.inputMode = "numeric";
+      it.value = normAngle(pl.r || 0) + "°";
+      it.addEventListener("change", function(){
+        var m = String(it.value).match(/-?[0-9.]+/);
+        pl.r = m ? normAngle(parseFloat(m[0])) : 0;
+        it.value = pl.r + "°";
+        markDirty(); render();
+      });
+      lt.appendChild(it); rs.appendChild(lt);
+    }
+    pop.appendChild(rs);
+
+    var r2 = ele("div", "row");
+    if(pl){
+      r2.appendChild(mkbtn("Straighten", "btn sm", function(){
+        pl.r = 0; markDirty(); render(); close(); pieceMenu();
+      }));
+      /* Not "take it out of play" — a piece sitting in a wing is still
+         in the show, it just does not move for this scene. Inheriting
+         the previous placement is what makes the diff produce no move
+         at all, which is the thing the crew actually wants. */
+      r2.appendChild(mkbtn("Same as last scene", "btn sm", function(){
+        leaveAsWas(); close();
+      }));
+      r2.appendChild(mkbtn("Off for this scene", "btn sm hot", function(){
+        delete sc.place[selected]; markDirty(); render(); close();
+        toast("Struck. The crew will be told to take it off.");
+      }));
+    } else {
+      r2.appendChild(mkbtn("Bring into this scene", "btn on", function(){
+        leaveAsWas(); close();
+      }));
+    }
+    pop.appendChild(r2);
+
+    var done = ele("div", "row"); done.style.marginTop = "12px";
+    done.appendChild(mkbtn("Done", "btn on wide", close));
+    pop.appendChild(done);
+    body.appendChild(pop);
   });
-  pop.appendChild(seg);
-
-  if(pl && noteFor === selected){
-    var rn = ele("div", "row notebox");
-    var ln = ele("label", "f"); ln.appendChild(ele("span", null, "Note for the crew"));
-    var inp = document.createElement("input"); inp.type = "text";
-    inp.value = pl.note || "";
-    inp.placeholder = "upstage of leg 2";
-    inp.addEventListener("input", function(){ pl.note = inp.value; markDirty(); });
-    ln.appendChild(inp); rn.appendChild(ln);
-    rn.appendChild(mkbtn("Done", "btn sm", function(){ noteFor = null; render(); }));
-    pop.appendChild(rn);
-  }
-
-  /* Size is typed, not dragged. A resize handle on the plan sits right
-     where a thumb lands, and a set piece that quietly changed size was
-     the thing that kept going wrong.
-
-     A size belongs to the piece, not to this placement — a sofa is one
-     sofa in every scene — so a change here changes it everywhere, on
-     purpose. The angle belongs to the placement, because the same sofa
-     genuinely does face different ways in different scenes. */
-  /* All three on one line. The popover floats over the plan, and on a
-     phone a stacked form is taller than the map it is covering — you
-     end up editing a piece you cannot see. */
-  var rs = ele("div", "row");
-  [["Width","w"],["Depth","h"]].forEach(function(o){
-    var l = ele("label", "f size"); l.appendChild(ele("span", null, o[0]));
-    var i = document.createElement("input");
-    i.type = "text"; i.inputMode = "decimal";
-    i.value = fmtFeet(toFeet(p[o[1]]));
-    i.addEventListener("change", function(){
-      var ft = parseFeet(i.value);
-      if(ft === null){ i.value = fmtFeet(toFeet(p[o[1]])); return; }
-      p[o[1]] = clampSz(toUnits(ft));
-      i.value = fmtFeet(toFeet(p[o[1]]));      // show the clamped value back
-      markDirty(); drawPieces(sceneAt(viewIdx));
-    });
-    l.appendChild(i); rs.appendChild(l);
-  });
-
-  if(pl){
-    var lt = ele("label", "f size"); lt.appendChild(ele("span", null, "Turn"));
-    var it = document.createElement("input");
-    it.type = "text"; it.inputMode = "numeric";
-    it.value = normAngle(pl.r || 0) + "°";
-    it.addEventListener("change", function(){
-      var m = String(it.value).match(/-?[\d.]+/);
-      pl.r = m ? normAngle(parseFloat(m[0])) : 0;
-      it.value = pl.r + "°";
-      markDirty(); render();
-    });
-    lt.appendChild(it); rs.appendChild(lt);
-  }
-  pop.appendChild(rs);
-
-
-  var r2 = ele("div", "row");
-  if(pl){
-    r2.appendChild(mkbtn("Straighten", "btn sm", function(){
-      pl.r = 0; markDirty(); render();
-    }));
-    /* Not "take it out of play" — a piece sitting in a wing is still
-       in the show, it just does not move for this scene. Inheriting
-       the previous placement is what makes the diff produce no move
-       at all, which is the thing the crew actually wants. */
-    r2.appendChild(mkbtn("Same as last scene", "btn sm", leaveAsWas));
-    r2.appendChild(mkbtn("Off for this scene", "btn sm hot", function(){
-      delete sc.place[selected]; markDirty(); render();
-      toast("Struck. The crew will be told to take it off.");
-    }));
-  } else {
-    r2.appendChild(mkbtn("Bring into this scene", "btn on", leaveAsWas));
-  }
-  pop.appendChild(r2);
-  host.appendChild(pop);
 }
 
 function sendToZone(zid){

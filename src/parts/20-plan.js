@@ -153,11 +153,15 @@ function sizeLabels(){
 function xform(x, y, r){
   return "translate(" + x + "," + y + ")" + (r ? " rotate(" + r + ")" : "");
 }
-/* Height of the upright box a turned rectangle sits inside — where the
-   caption has to clear to. */
+/* The upright box a turned rectangle sits inside: the caption has to
+   clear its bottom, the menu handle has to clear its side. */
 function spanH(w, h, r){
   var a = r * Math.PI / 180;
   return Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a));
+}
+function spanW(w, h, r){
+  var a = r * Math.PI / 180;
+  return Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a));
 }
 /* The caption stays upright while the piece turns, so a name is never
    read sideways. Counter-rotating inside the turned group cancels the
@@ -169,6 +173,9 @@ function setPieceTransform(g, x, y, r, w, h, capFS){
   spin.setAttribute("transform", "rotate(" + (-r) + ")");
   var t = spin.querySelector(".cap");
   if(t) t.setAttribute("y", spanH(w, h, r)/2 + 4 + capFS);
+  var mg = spin.querySelector(".menu");
+  if(mg) mg.setAttribute("transform",
+    "translate(" + (spanW(w, h, r)/2 + (parseFloat(g.getAttribute("data-arm")) || 0)) + ",0)");
 }
 
 var SPIN_ARM = 22;          // handle stand-off from the piece, in CSS px
@@ -211,17 +218,30 @@ function drawPieces(scene){
       t.textContent = p.name;
     }
 
-    /* One handle, and it only turns. Size is typed in the popover:
-       a grab handle that resizes sits exactly where a thumb lands
-       while panning, and a set piece that quietly changes size is
-       worse than one that is slightly awkward to resize. */
+    /* Two handles on the selected piece, both small and both clear of
+       it. The one above turns; it rides with the piece so it points
+       the way the piece faces. The one beside opens the menu; it sits
+       in the upright group so it never swings underneath your thumb.
+       Neither resizes — size is typed, because a resize grip sits
+       exactly where a thumb lands while panning. */
     if(mode === "build" && selected === p.id){
       var arm = SPIN_ARM * k, rad = 7 * k;
+      g.setAttribute("data-arm", arm);
       var top = -hh/2 - arm;
       el("line", { x1:0, y1:-hh/2, x2:0, y2:top + rad, class:"spin-arm" }, g);
       el("circle", { cx:0, cy:top, r:rad, class:"spin" }, g);
       el("circle", { cx:0, cy:top, r:Math.max(rad*2.4, 22*k), class:"spin-hit",
                      "data-spin":"1" }, g);
+
+      var mg = el("g", { class:"menu",
+                         transform:"translate(" + (spanW(w,hh,rot)/2 + arm) + ",0)" }, up);
+      el("line", { x1:-arm + rad, y1:0, x2:0, y2:0, class:"spin-arm" }, mg);
+      el("circle", { cx:0, cy:0, r:rad*1.25, class:"menu-btn" }, mg);
+      [-1,0,1].forEach(function(i){
+        el("circle", { cx:i*rad*0.5, cy:0, r:rad*0.16, class:"menu-pip" }, mg);
+      });
+      el("circle", { cx:0, cy:0, r:Math.max(rad*2.4, 22*k), class:"spin-hit",
+                     "data-menu":"1" }, mg);
     }
     nodes[p.id] = g;
   });
@@ -436,8 +456,17 @@ function onPointerDown(evt){
   var p = svgPoint(evt);
   if(!p){ render(); return; }
 
-  var onSpin = wasSelected && evt.target.getAttribute &&
-               evt.target.getAttribute("data-spin") === "1";
+  /* The handles only answer on a piece that is already selected, so
+     the tap that picks a piece can never also fire one of them. */
+  var hit = wasSelected && evt.target.getAttribute ? evt.target : null;
+  if(hit && hit.getAttribute("data-menu") === "1"){
+    drag = null;
+    render();
+    pieceMenu();
+    if(evt.preventDefault) evt.preventDefault();
+    return;
+  }
+  var onSpin = !!hit && hit.getAttribute("data-spin") === "1";
   var sc = sceneAt(viewIdx), pl = sc && sc.place[id];
   var c = pl ? abs(pl) : null;
   var pc = pieceById(id);
@@ -454,7 +483,6 @@ function onPointerDown(evt){
   if(!wasSelected) render();                  // first tap selects and draws the handle
   drag.g = nodes[drag.id] || null;
   if(drag.g) drag.g.classList.add("dragging");
-  hideInspector();
   if(evt.preventDefault) evt.preventDefault();
 }
 
