@@ -93,13 +93,7 @@ function paintSceneStrip(){
   });
   strip.appendChild(nm);
 
-  var seg = ele("div", "seg");
-  [["Curtain out","open"],["Curtain in","closed"]].forEach(function(o){
-    var b = ele("button", (sc.curtain||"open") === o[1] ? "on" : null, o[0]);
-    b.addEventListener("click", function(){ sc.curtain = o[1]; markDirty(); render(); });
-    seg.appendChild(b);
-  });
-  strip.appendChild(seg);
+  strip.appendChild(curtainSeg(sc));
 
   var note = document.createElement("input");
   note.type = "text"; note.className = "note";
@@ -110,6 +104,28 @@ function paintSceneStrip(){
   strip.appendChild(note);
   /* Reorder and delete are rarer and riskier, so they stay one tap in. */
   strip.appendChild(mkbtn("More…", "btn sm", sceneSheet));
+}
+
+/* One control for all three line sets. Each button says which curtain
+   it is and what state it is in, and tapping it flips that one — a
+   segmented control with a name and a state is self-describing, where
+   a row of lit and unlit names leaves you guessing which way round it
+   reads in the dark. */
+function curtainSeg(sc){
+  var seg = ele("div", "seg curtains");
+  CURTAINS.forEach(function(c){
+    var open = curtainAt(sc, c.key) === "open";
+    var b = ele("button", open ? null : "on");
+    b.appendChild(ele("span", "cn", c.short));
+    b.appendChild(ele("span", "cs", open ? "open" : "closed"));
+    b.title = c.name + " is " + (open ? "open" : "closed");
+    b.addEventListener("click", function(){
+      sc[c.key] = open ? "closed" : "open";
+      markDirty(); render();
+    });
+    seg.appendChild(b);
+  });
+  return seg;
 }
 
 /* ---------------- set pieces along the bottom ---------------- */
@@ -336,13 +352,10 @@ function sceneSheet(){
     l1.appendChild(i1); r1.appendChild(l1); body.appendChild(r1);
 
     var r2 = ele("div", "row");
-    var seg = ele("div", "seg");
-    [["Curtain out","open"],["Curtain in","closed"]].forEach(function(o){
-      var b = ele("button", (sc.curtain||"open") === o[1] ? "on" : null, o[0]);
-      b.addEventListener("click", function(){ sc.curtain = o[1]; markDirty(); render(); close(); sceneSheet(); });
-      seg.appendChild(b);
-    });
-    r2.appendChild(seg); body.appendChild(r2);
+    r2.appendChild(curtainSeg(sc));
+    body.appendChild(r2);
+    body.appendChild(ele("div", "help",
+      "Open means the audience can see through to the stage."));
 
     var r3 = ele("div", "row");
     var l3 = ele("label", "f"); l3.appendChild(ele("span", null, "What the crew needs to know"));
@@ -511,7 +524,7 @@ function buildSheet(){
     var hd = ele("div", "hd2");
     hd.appendChild(ele("span", "no", (i+1) + "."));
     hd.appendChild(ele("span", "nmx", sc.name));
-    hd.appendChild(ele("span", "cur", sc.curtain === "closed" ? "curtain in" : "curtain out"));
+    hd.appendChild(ele("span", "cur", curtainSummary(sc).toLowerCase()));
     blk.appendChild(hd);
     if(sc.note) blk.appendChild(ele("div", "nt", sc.note));
 

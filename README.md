@@ -17,6 +17,9 @@ scenes.
   than a vague side.
 - **Four locations**, matching one specific theatre: stage, wing SR, wing SL, and an
   **aux stage off stage right only**. There is an upstage crossover.
+- **Three line sets**: the main curtain at the proscenium, a mid curtain, and a scrim.
+  Each is tracked per scene and called by name. **Open** always means the audience can
+  see the stage; **closed** means they cannot.
 - **Move lists are computed, never typed.** Each scene stores where every piece sits.
   The change between two consecutive scenes is derived by diffing them, so the crew
   list can never drift out of sync with the plan. A piece that only pivots is called
@@ -181,9 +184,9 @@ npm ci
 npm test
 ```
 
-52 checks covering route derivation, move-list generation, the command deck's positional
-guarantees, build mode, feet parsing, free rotation and its snap, backstage modes,
-failed-call handling, the print sheet, and the self-rebuild round trip.
+56 checks covering route derivation, move-list generation, the command deck's positional
+guarantees, build mode, feet parsing, free rotation and its snap, the three curtains,
+backstage modes, failed-call handling, the print sheet, and the self-rebuild round trip.
 
 They look for controls by **the words on them** rather than by class name, so a test
 breaks when the interface stops saying what it does — not when a selector is renamed.

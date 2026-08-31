@@ -152,9 +152,9 @@ function paintMoves(moves){
     var sw = ele("div", "sw");
     var tx = ele("div", "txt");
     if(m.kind === "curtain"){
-      sw.style.background = "var(--gel-rose)";
+      sw.style.background = m.cur.color;
       var cn = ele("div", "nm");
-      cn.appendChild(ele("span", "verb", "Curtain"));
+      cn.appendChild(ele("span", "verb", m.verb));
       cn.appendChild(document.createTextNode(m.text));
       tx.appendChild(cn);
       tx.appendChild(ele("div", "path", m.sub));
@@ -196,7 +196,7 @@ function paintNote(){
   var sc = sceneAt(viewIdx), box = $("notebox");
   if(!sc || !sc.note){ box.classList.add("hide"); box.innerHTML = ""; return; }
   box.classList.remove("hide"); box.innerHTML = "";
-  var b = ele("b", null, (sc.curtain === "closed" ? "Curtain in" : "Curtain out") + " · scene note");
+  var b = ele("b", null, curtainSummary(sc) + " · scene note");
   box.appendChild(b);
   box.appendChild(document.createTextNode(sc.note));
 }

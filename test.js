@@ -122,7 +122,13 @@ setTimeout(async () => {
     if (!t.some(x => /Sofa/.test(x))) throw new Error("no sofa move");
   });
   step("the curtain is called first", () => {
-    if (!/Curtain/.test(moveTexts()[0])) throw new Error("first move is " + moveTexts()[0]);
+    if (!/curtain/i.test(moveTexts()[0])) throw new Error("first move is " + moveTexts()[0]);
+  });
+  step("a curtain move says open or close, not in or out", () => {
+    const verb = d.querySelector("#moves .mv .verb").textContent;
+    if (verb !== "Open" && verb !== "Close") throw new Error("verb reads " + verb);
+    if (/curtain (in|out)/i.test(moveTexts().join(" ")))
+      throw new Error("the old in/out wording is still in the list");
   });
   step("sofa goes wing SR to stage with nothing in between", () => {
     const row = moveTexts().find(x => /Sofa/.test(x));
@@ -204,7 +210,10 @@ setTimeout(async () => {
     const ins = strip.querySelectorAll("input");
     if (ins.length !== 2) throw new Error(ins.length + " fields in the scene strip");
     if (ins[0].value !== w.GL.S.scenes[3].name) throw new Error("name field shows " + ins[0].value);
-    if (!byText("Curtain out", "button", strip)) throw new Error("no curtain control");
+    const cs = strip.querySelectorAll(".seg.curtains button");
+    if (cs.length !== 3) throw new Error(cs.length + " curtain toggles, expected main, mid and scrim");
+    if (![...cs].every(b => /open|closed/.test(b.textContent)))
+      throw new Error("a toggle does not say which way it is set");
     ins[1].value = "Watch the rake";
     ins[1].dispatchEvent(new w.Event("input"));
     if (w.GL.S.scenes[3].note !== "Watch the rake") throw new Error("note not saved");
@@ -292,6 +301,33 @@ setTimeout(async () => {
     if (!/Aux stage/.test(d.querySelector("#pophost .pop .tag").textContent))
       throw new Error("popover still says " + d.querySelector("#pophost .pop .tag").textContent);
     if (state.scenes.length !== 5) throw new Error("state unexpectedly changed");
+  });
+  step("all three line sets are tracked, and each is called by name", () => {
+    const sc = w.GL.S.scenes[w.GL.viewIdx];
+    if (w.GL.CURTAINS.length !== 3) throw new Error("expected main, mid and scrim");
+    sc.mid = "closed";
+    w.GL.render();
+    const strip = d.getElementById("scenestrip");
+    const mid = [...strip.querySelectorAll(".seg.curtains button")]
+      .find(b => /MID/.test(b.textContent));
+    if (!/closed/.test(mid.textContent)) throw new Error("toggle reads " + mid.textContent);
+    if (!mid.classList.contains("on")) throw new Error("closed is not marked");
+    mid.click();
+    if (sc.mid !== "open") throw new Error("tapping did not reopen it");
+  });
+  step("a curtain the theatre never closes is never called", () => {
+    const a = { curtain: "closed" }, b = { curtain: "open" };
+    const moves = w.GL.movesBetween(
+      { curtain: "closed", place: {} }, { curtain: "open", place: {} });
+    if (moves.length !== 1) throw new Error(moves.length + " curtain moves, expected 1");
+    if (moves[0].verb !== "Open") throw new Error("said " + moves[0].verb);
+    if (!a || !b) throw new Error("unreachable");
+  });
+  step("the plan carries a rod for each, and the scrim does not clash with the modal backdrop", () => {
+    if (d.querySelectorAll("svg.plan .curtain").length !== 6)
+      throw new Error("expected two panels per curtain");
+    if (d.querySelector("svg.plan .scrim"))
+      throw new Error("a curtain uses .scrim, which is the modal backdrop class");
   });
   step("a piece that does not move stays put instead of vanishing", () => {
     need("Same as last scene", "button", d.querySelector("#pophost .pop")).click();
@@ -426,8 +462,8 @@ setTimeout(async () => {
     const state = JSON.parse(d.getElementById("state").textContent);
     if (!blks.length) throw new Error("empty sheet");
     if (blks.length !== w.GL.S.scenes.length) throw new Error(blks.length + " blocks");
-    if (!/curtain/.test(d.querySelector("#runsheet .cur").textContent))
-      throw new Error("no curtain state");
+    const cur = d.querySelector("#runsheet .cur").textContent;
+    if (!/(open|closed)$/.test(cur)) throw new Error("no curtain state: " + cur);
     if (!state) throw new Error("no state");
   });
   step("building the run sheet does not touch the stylesheet", () => {

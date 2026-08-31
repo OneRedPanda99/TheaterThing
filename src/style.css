@@ -160,7 +160,12 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none}
 .plan-note{font-family:var(--ui);fill:var(--dim);opacity:.75}
 .house{fill:none;stroke:var(--rule2);stroke-width:1;stroke-dasharray:2 7}
 .house-tag{font-family:var(--ui);font-weight:700;letter-spacing:.05em;fill:var(--dim);opacity:.7}
-.curtain{fill:var(--gel-rose);opacity:.8}
+/* Three line sets, told apart by colour. The scrim is drawn faint
+   because you can see through it. */
+.curtain{opacity:.8}
+.curtain.main{fill:var(--gel-rose)}
+.curtain.mid{fill:var(--gel-congo)}
+.curtain.sheer{fill:var(--gel-green);opacity:.4}
 .curtain-rod{stroke:var(--rule2);stroke-width:1.5;opacity:.6}
 .route{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:7 5;opacity:.9}
 .route.dim{stroke:var(--dim);opacity:.22}
@@ -252,7 +257,13 @@ body.mode-build .pc{cursor:grab}
 .scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
   padding:9px 10px;border-bottom:1px solid var(--rule)}
 .scenestrip input{flex:1 1 150px;padding:8px 10px}
-.scenestrip .seg button{min-height:40px;padding:8px 12px;font-size:13px}
+.scenestrip .seg button{min-height:40px;padding:6px 10px;font-size:13px}
+/* Name over state, so one button says both which curtain and how it
+   is set without needing a legend. */
+.seg.curtains button{display:flex;flex-direction:column;gap:1px;line-height:1.15;padding:6px 10px}
+.seg.curtains .cn{font-size:11px;letter-spacing:.05em;opacity:.75}
+.seg.curtains .cs{font-size:13px;font-weight:700}
+.seg.curtains button.on .cn{opacity:.85}
 .scenestrip .btn{min-height:40px}
 .scenestrip .note{flex:1 1 190px}
 .tray{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;
