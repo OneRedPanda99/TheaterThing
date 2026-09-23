@@ -267,6 +267,7 @@ body.mode-build .pc{cursor:grab}
    tall phone box letterboxes however you fit it, so the room the plan
    cannot use goes to the two things a stage manager edits most. */
 .buildpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
+  min-height:var(--buildmin,0px);display:flex;flex-direction:column;
   background:var(--surface);border-top:1px solid var(--rule2)}
 .scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
   padding:9px 10px;border-bottom:1px solid var(--rule)}
@@ -284,7 +285,12 @@ body.mode-build .pc{cursor:grab}
    target whether the row is open or shut. */
 .scenestrip .fold{margin-left:auto;width:40px;padding:0;font-size:15px;line-height:1}
 .scenestrip.shut{padding:3px 10px}
-.tray{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;
+/* Given the room the plan cannot use, the tray wraps into rows rather
+   than running off the side. A piece you cannot see is a piece you
+   cannot place, and a sideways scroller hides half the set behind an
+   edge with nothing to say it is there. */
+.tray{display:flex;flex-wrap:wrap;align-content:flex-start;gap:7px;padding:9px 10px;
+  flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;
   scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .pchip{flex:none;display:flex;align-items:center;gap:8px;cursor:pointer;
   border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);
@@ -966,10 +972,73 @@ function setPieceTransform(g, x, y, r, w, h, capFS){
   if(!spin) return;
   spin.setAttribute("transform", "rotate(" + (-r) + ")");
   var t = spin.querySelector(".cap");
-  if(t) t.setAttribute("y", spanH(w, h, r)/2 + 4 + capFS);
+  if(t) capAnchor(t, spanH(w, h, r), capFS);
   var mg = spin.querySelector(".menu");
   if(mg) mg.setAttribute("transform",
     "translate(" + (spanW(w, h, r)/2 + (parseFloat(g.getAttribute("data-arm")) || 0)) + ",0)");
+}
+
+/* A caption sits under its piece by default and can be flipped over
+   it. Both offsets are kept on the node so decollide() can swap them
+   without knowing anything about the piece it belongs to. */
+function capAnchor(t, span, capFS, above){
+  t.setAttribute("data-below", span/2 + 4 + capFS);
+  t.setAttribute("data-above", -(span/2 + 4));
+  t.setAttribute("y", t.getAttribute(above ? "data-above" : "data-below"));
+}
+/* Build mode captions every piece, because there you are hunting for
+   one by name. That puts eight names into a drawing that already
+   carries nine grid tags, six leg marks, three curtain names and four
+   zone names, inside a phone-width box — and left alone they land on
+   each other. Captioning only what moves thins run mode out but does
+   not save it: one piece landing on USC is enough, and there it is a
+   name somebody is reading in the dark.
+   Two rules, applied once everything is drawn and can be measured:
+   a caption that lands on another caption flips above its piece, and
+   a reference mark a caption lands on gives way. A grid tag is there
+   to be read off the map; a piece name is there to be found on it.
+   Screen rectangles, not getBBox, because the pieces are inside
+   rotated groups and only the client box is in a shared space. */
+function hits(a, b){
+  return a.left < b.right - 1 && b.left < a.right - 1 &&
+         a.top  < b.bottom - 1 && b.top  < a.bottom - 1;
+}
+function decollide(){
+  if(!svg) return;
+  var marks = [], i, j, n, list;
+  /* Restore first: a mark the last pass took away has to come back
+     when the piece that displaced it moves, or is no longer named. */
+  list = svg.querySelectorAll(".grid-tag, .plan-note");
+  for(i=0;i<list.length;i++){ list[i].style.visibility = ""; marks.push(list[i]); }
+
+  /* Zone names hold their ground — "WING SL" is how you read the map
+     at all — so a caption moves around them, not the other way. */
+  var keep = [];
+  list = svg.querySelectorAll(".zone-name, .house-tag");
+  for(i=0;i<list.length;i++) keep.push(list[i].getBoundingClientRect());
+
+  var caps = svg.querySelectorAll(".pc .cap"), placed = [];
+  for(i=0;i<caps.length;i++){
+    n = caps[i];
+    var box = n.getBoundingClientRect(), clash = false;
+    for(j=0;j<placed.length && !clash;j++) if(hits(box, placed[j])) clash = true;
+    for(j=0;j<keep.length && !clash;j++) if(hits(box, keep[j])) clash = true;
+    if(clash){
+      n.setAttribute("y", n.getAttribute("data-above"));
+      var flipped = n.getBoundingClientRect(), stillClash = false;
+      for(j=0;j<placed.length && !stillClash;j++) if(hits(flipped, placed[j])) stillClash = true;
+      for(j=0;j<keep.length && !stillClash;j++) if(hits(flipped, keep[j])) stillClash = true;
+      /* Nowhere clean to put it. Under the piece is the readable side
+         of a bad choice: above, it collides with the turn handle. */
+      if(stillClash) n.setAttribute("y", n.getAttribute("data-below"));
+      box = n.getBoundingClientRect();
+    }
+    placed.push(box);
+  }
+  for(i=0;i<marks.length;i++){
+    var m = marks[i].getBoundingClientRect();
+    for(j=0;j<placed.length;j++) if(hits(m, placed[j])){ marks[i].style.visibility = "hidden"; break; }
+  }
 }
 
 var SPIN_ARM = 22;          // handle stand-off from the piece, in CSS px
@@ -1007,9 +1076,10 @@ function drawPieces(scene){
 
     var up = el("g", { class:"upright", transform:"rotate(" + (-rot) + ")" }, g);
     if(!named || named[p.id]){
-      var t = el("text", { x:0, y:spanH(w,hh,rot)/2+4+capFS, "text-anchor":"middle",
+      var t = el("text", { x:0, "text-anchor":"middle",
                            class:"cap", "font-size":capFS, fill:"var(--ink)" }, up);
       t.textContent = p.name;
+      capAnchor(t, spanH(w,hh,rot), capFS);
     }
 
     /* Two handles on the selected piece, both small and both clear of
@@ -1039,6 +1109,7 @@ function drawPieces(scene){
     }
     nodes[p.id] = g;
   });
+  decollide();
 }
 function drawRoutes(moves){
   if(!routeLayer) return;
@@ -1422,9 +1493,34 @@ function snapPx(i){
    above it, and it lives on the stage because both read it from there.
    Build mode swaps the sheet for the tray; the plan has to grow into
    the difference or it sits in a strip with dead black under it. */
+/* The height the plan's own 1170x658 shape needs at this width. Past
+   that the map cannot grow — a theatre is wider than it is deep and a
+   phone is the other way round — so every pixel past it is dead. */
+function planFitH(){
+  return Math.round((stageEl.clientWidth || 375) / (VB.w / VB.h));
+}
 function applyPanes(){
-  if(!sheetOverlay()){ stageEl.style.removeProperty("--pane"); return; }
-  var h = mode === "build" ? ($("buildpane").offsetHeight || 130) : snapPx(snap);
+  /* Above 640px the plan and the pane are side by side or stacked by
+     the grid, and neither number applies — clear both, or a height
+     worked out for a phone follows the layout across the breakpoint. */
+  if(!sheetOverlay()){
+    stageEl.style.removeProperty("--pane");
+    $("buildpane").style.removeProperty("--buildmin");
+    return;
+  }
+  var h;
+  if(mode === "build"){
+    /* Hand the room the plan cannot use to the pane below, which is
+       what the build pane was always for. Left to its own content
+       height it took ~190px of a 640px stage and the other 240 sat as
+       a dead band above and below the map — the map no larger for it,
+       the tray scrolling sideways with pieces off the edge. Folded,
+       the row has asked for the map instead, so it keeps to itself. */
+    var bp = $("buildpane");
+    var spare = (stageEl.clientHeight || 480) - planFitH();
+    bp.style.setProperty("--buildmin", (paneOpen === false ? 0 : Math.max(0, spare)) + "px");
+    h = bp.offsetHeight || 130;
+  } else h = snapPx(snap);
   stageEl.style.setProperty("--pane", h + "px");
 }
 function setSnap(i){

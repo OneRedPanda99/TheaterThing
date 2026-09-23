@@ -255,6 +255,7 @@ body.mode-build .pc{cursor:grab}
    tall phone box letterboxes however you fit it, so the room the plan
    cannot use goes to the two things a stage manager edits most. */
 .buildpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
+  min-height:var(--buildmin,0px);display:flex;flex-direction:column;
   background:var(--surface);border-top:1px solid var(--rule2)}
 .scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
   padding:9px 10px;border-bottom:1px solid var(--rule)}
@@ -272,7 +273,12 @@ body.mode-build .pc{cursor:grab}
    target whether the row is open or shut. */
 .scenestrip .fold{margin-left:auto;width:40px;padding:0;font-size:15px;line-height:1}
 .scenestrip.shut{padding:3px 10px}
-.tray{display:flex;gap:7px;padding:9px 10px;overflow-x:auto;
+/* Given the room the plan cannot use, the tray wraps into rows rather
+   than running off the side. A piece you cannot see is a piece you
+   cannot place, and a sideways scroller hides half the set behind an
+   edge with nothing to say it is there. */
+.tray{display:flex;flex-wrap:wrap;align-content:flex-start;gap:7px;padding:9px 10px;
+  flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;
   scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .pchip{flex:none;display:flex;align-items:center;gap:8px;cursor:pointer;
   border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);

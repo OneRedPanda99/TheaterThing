@@ -41,9 +41,34 @@ function snapPx(i){
    above it, and it lives on the stage because both read it from there.
    Build mode swaps the sheet for the tray; the plan has to grow into
    the difference or it sits in a strip with dead black under it. */
+/* The height the plan's own 1170x658 shape needs at this width. Past
+   that the map cannot grow — a theatre is wider than it is deep and a
+   phone is the other way round — so every pixel past it is dead. */
+function planFitH(){
+  return Math.round((stageEl.clientWidth || 375) / (VB.w / VB.h));
+}
 function applyPanes(){
-  if(!sheetOverlay()){ stageEl.style.removeProperty("--pane"); return; }
-  var h = mode === "build" ? ($("buildpane").offsetHeight || 130) : snapPx(snap);
+  /* Above 640px the plan and the pane are side by side or stacked by
+     the grid, and neither number applies — clear both, or a height
+     worked out for a phone follows the layout across the breakpoint. */
+  if(!sheetOverlay()){
+    stageEl.style.removeProperty("--pane");
+    $("buildpane").style.removeProperty("--buildmin");
+    return;
+  }
+  var h;
+  if(mode === "build"){
+    /* Hand the room the plan cannot use to the pane below, which is
+       what the build pane was always for. Left to its own content
+       height it took ~190px of a 640px stage and the other 240 sat as
+       a dead band above and below the map — the map no larger for it,
+       the tray scrolling sideways with pieces off the edge. Folded,
+       the row has asked for the map instead, so it keeps to itself. */
+    var bp = $("buildpane");
+    var spare = (stageEl.clientHeight || 480) - planFitH();
+    bp.style.setProperty("--buildmin", (paneOpen === false ? 0 : Math.max(0, spare)) + "px");
+    h = bp.offsetHeight || 130;
+  } else h = snapPx(snap);
   stageEl.style.setProperty("--pane", h + "px");
 }
 function setSnap(i){
