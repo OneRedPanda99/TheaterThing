@@ -51,7 +51,7 @@ if (draft && draft.baseRev === S.rev) { S = draft.state; }
    everything in memory, so anything personal to this phone lives in
    localStorage rather than in the show. */
 var role     = LS.get("role", null);      // "sm" | "crew"
-var mode     = "run";                     // "run" | "build"
+var mode     = "run";                     // "view" | "edit"
 var viewIdx  = S.liveIndex;
 var browsing = false;
 var selected = null;

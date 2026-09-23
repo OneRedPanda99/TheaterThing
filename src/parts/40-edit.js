@@ -1,14 +1,14 @@
 /* ===============================================================
-   Build mode — where the stage manager makes the show.
+   Edit mode — where the stage manager makes the show.
 
-   A separate screen, not a mode bleeding through the run screen.
+   A separate screen, not a mode bleeding through the view screen.
    The plan fills it, the scenes run along the top, the set pieces
    run along the bottom, and a tapped piece opens its inspector in
    between. Nothing is nested more than one tap deep.
    =============================================================== */
 
 function setMode(m){
-  if(m === "build" && !isSM()){ toast("Only the stage manager can build the show."); return; }
+  if(m === "edit" && !isSM()){ toast("Only the stage manager can edit the show."); return; }
   mode = m;
   selected = null;
   render();
@@ -21,7 +21,7 @@ function setMode(m){
 /* ---------------- scenes along the top ---------------- */
 function paintSceneBar(){
   var bar = $("scenebar");
-  if(mode !== "build"){ bar.innerHTML = ""; return; }
+  if(mode !== "edit"){ bar.innerHTML = ""; return; }
   bar.innerHTML = "";
   S.scenes.forEach(function(sc, i){
     var b = ele("button", "chip" + (i === viewIdx ? " cur" : "") + (i === S.liveIndex ? " live" : ""));
@@ -89,7 +89,7 @@ var paneOpen = LS.get("strip", true);
 
 function paintSceneStrip(){
   var strip = $("scenestrip");
-  if(mode !== "build"){ strip.innerHTML = ""; return; }
+  if(mode !== "edit"){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
   strip.classList.toggle("shut", !paneOpen);
@@ -154,8 +154,8 @@ function curtainSeg(sc){
 /* ---------------- set pieces along the bottom ---------------- */
 function paintTray(){
   var tray = $("tray");
-  tray.classList.toggle("hide", mode !== "build" || !paneOpen);
-  if(mode !== "build" || !paneOpen){ tray.innerHTML = ""; return; }
+  tray.classList.toggle("hide", mode !== "edit" || !paneOpen);
+  if(mode !== "edit" || !paneOpen){ tray.innerHTML = ""; return; }
   tray.innerHTML = "";
   var sc = sceneAt(viewIdx);
   S.pieces.forEach(function(p){
@@ -164,7 +164,7 @@ function paintTray(){
     var sw = ele("div", "sw"); sw.style.background = p.color;
     b.appendChild(sw);
     b.appendChild(document.createTextNode(p.name));
-    b.title = inScene ? "Select on the plan" : "Bring into this scene";
+    b.title = inScene ? "Select on the plan" : "Add to this scene";
     b.addEventListener("click", function(){
       selected = p.id;
       if(!inScene) leaveAsWas();
@@ -211,7 +211,7 @@ function newPieceSheet(){
       if(sc) sc.place[p.id] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" };
       selected = p.id;
       close(); markDirty(); render();
-      toast("Parked in wing SR. Drag it where it lives.");
+      toast("Added in wing SR. Drag it where it goes.");
     }));
     body.appendChild(r3);
     setTimeout(function(){ i1.focus(); }, 30);
@@ -310,12 +310,12 @@ function pieceMenu(){
       r2.appendChild(mkbtn("Same as last scene", "btn sm", function(){
         leaveAsWas(); close();
       }));
-      r2.appendChild(mkbtn("Off for this scene", "btn sm hot", function(){
+      r2.appendChild(mkbtn("Remove from this scene", "btn sm hot", function(){
         delete sc.place[selected]; markDirty(); render(); close();
-        toast("Struck. The crew will be told to take it off.");
+        toast("Removed. It will show as a move off.");
       }));
     } else {
-      r2.appendChild(mkbtn("Bring into this scene", "btn on", function(){
+      r2.appendChild(mkbtn("Add to this scene", "btn on", function(){
         leaveAsWas(); close();
       }));
     }
@@ -340,10 +340,10 @@ function leaveAsWas(){
   var src = prev && prev.place[selected];
   if(src){
     sc.place[selected] = { zone:src.zone, x:src.x, y:src.y, r:src.r||0, note:src.note||"" };
-    toast("Stays where it was in “" + prev.name + "” — no move for the crew.");
+    toast("Stays where it was in “" + prev.name + "” — no move needed.");
   } else {
     sc.place[selected] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" };
-    toast("Nothing earlier to follow — parked in wing SR.");
+    toast("Nothing earlier to copy — placed in wing SR.");
   }
   markDirty(); render();
 }
@@ -404,25 +404,38 @@ function setupSheet(){
     var s1 = ele("div", "sect");
     s1.appendChild(ele("span", "tag", "This device"));
     var rr = ele("div", "row");
-    rr.appendChild(mkbtn(isSM() ? "Stage manager" : "Crew", "btn", function(){ close(); askRole(true); }));
-    /* These three toggle in place. Closing and reopening the sheet to
-       show a new label flashes the screen, which is the last thing you
+    /* Name over value, the same way the curtain control reads, because
+       a button whose whole label is its current value cannot say
+       whether it is stating that value or offering to set it. "Bright"
+       alone is both; "Brightness / Bright" is only one. */
+    function lv(name, value, cls, fn){
+      var b = ele("button", "btn lv" + (cls ? " " + cls : ""));
+      b.appendChild(ele("span", "cn", name));
+      b.appendChild(ele("span", "cs", value));
+      b.addEventListener("click", fn);
+      b.setAttribute("aria-label", name + ": " + value);
+      rr.appendChild(b);
+      return b;
+    }
+    function setLv(b, name, value, on){
+      b.lastChild.textContent = value;
+      b.setAttribute("aria-label", name + ": " + value);
+      b.classList.toggle("on", !!on);
+    }
+    lv("Role", isSM() ? "Stage manager" : "Crew", null, function(){ close(); askRole(true); });
+    /* These two toggle in place. Closing and reopening the sheet to
+       show a new value flashes the screen, which is the last thing you
        want from the control you reach for in the dark. */
-    var db = mkbtn(DIMS[dimIdx].label, "btn", function(){
+    var db = lv("Brightness", DIMS[dimIdx].label, dimIdx > 0 ? "on" : null, function(){
       dimIdx = (dimIdx+1) % DIMS.length; LS.set("dim", dimIdx); applyDim();
-      db.textContent = DIMS[dimIdx].label;
-      db.classList.toggle("on", dimIdx > 0);
+      setLv(db, "Brightness", DIMS[dimIdx].label, dimIdx > 0);
     });
-    db.classList.toggle("on", dimIdx > 0);
-    rr.appendChild(db);
-    var wb = mkbtn(!wakeOk ? "No screen lock" : (wakeWanted ? "Screen stays on" : "Screen sleeps"),
-      "btn" + (wakeWanted ? " on" : ""), function(){
-        wakeWanted = !wakeWanted; LS.set("wake", wakeWanted); applyWake();
-        wb.textContent = wakeWanted ? "Screen stays on" : "Screen sleeps";
-        wb.classList.toggle("on", wakeWanted);
-      });
+    function wakeVal(){ return !wakeOk ? "Not available" : (wakeWanted ? "Stays on" : "Sleeps"); }
+    var wb = lv("Screen", wakeVal(), wakeWanted ? "on" : null, function(){
+      wakeWanted = !wakeWanted; LS.set("wake", wakeWanted); applyWake();
+      setLv(wb, "Screen", wakeVal(), wakeWanted);
+    });
     wb.disabled = !wakeOk;
-    rr.appendChild(wb);
     s1.appendChild(rr);
     s1.appendChild(ele("div", "help",
       "Brightness dims this screen only, so a phone in the wings does not spill light into the house."));
@@ -449,7 +462,7 @@ function setupSheet(){
       iw.type = "text"; iw.inputMode = "decimal"; iw.value = fmtFeet(stageFeet());
       var wh = ele("div", "help");
       function sayScale(){
-        wh.textContent = "Proscenium opening, wall to wall. That makes the stage "
+        wh.textContent = "The stage opening, wall to wall. That makes the stage "
           + fmtFeet(stageFeet()) + " across and "
           + fmtFeet(stageFeet() * ZONES.stage.h / ZONES.stage.w) + " deep.";
       }
@@ -468,8 +481,8 @@ function setupSheet(){
       s2.appendChild(rw); s2.appendChild(wh);
 
       var r3 = ele("div", "row");
-      r3.appendChild(mkbtn("Build the show", "btn on", function(){ close(); setMode("build"); }));
-      r3.appendChild(mkbtn("Print run sheet", "btn", function(){
+      r3.appendChild(mkbtn("Edit the show", "btn on", function(){ close(); setMode("edit"); }));
+      r3.appendChild(mkbtn("Print scene list", "btn", function(){
         buildSheet(); close();
         setTimeout(function(){ window.print(); }, 60);
       }));
@@ -478,7 +491,7 @@ function setupSheet(){
       r4.appendChild(mkbtn("Start a new show", "btn hot", function(){ close(); startNewShow(); }));
       s2.appendChild(r4);
       s2.appendChild(ele("div", "help",
-        "The run sheet is the paper backup. Theatre wifi is not a plan."));
+        "The printed list is the paper backup. Theatre wifi is not a plan."));
       body.appendChild(s2);
 
       var s3 = ele("div", "sect");
@@ -518,16 +531,16 @@ function startNewShow(){
       S = { rev:S.rev, show:"My show", demo:false, liveIndex:0, liveStamp:Date.now(),
             pieces:[], scenes:[{ id:"s"+Date.now(), name:"Preshow", note:"", curtain:"closed", place:{} }] };
       viewIdx = 0; browsing = false; selected = null; callFail = null;
-      markDirty(); setMode("build");
+      markDirty(); setMode("edit");
       toast("Empty show ready. Add your set pieces from the tray.");
     }, "Clear it", "Cancel");
 }
 
-/* ---------------- run sheet (paper backup) ---------------- */
+/* ---------------- printed scene list (paper backup) ---------------- */
 function buildSheet(){
   var el = $("runsheet"); el.innerHTML = "";   // never $("sheet") — that is the stylesheet
   var h = ele("h1", null, S.show);
-  var meta = ele("div", "meta", "Set change run sheet · " + S.scenes.length + " scenes · "
+  var meta = ele("div", "meta", "Scene list · " + S.scenes.length + " scenes · "
     + S.pieces.length + " pieces · printed " + new Date().toLocaleDateString());
   el.appendChild(h); el.appendChild(meta);
 
@@ -542,7 +555,7 @@ function buildSheet(){
 
     var moves = movesBetween(sceneAt(i-1), sc);
     if(!moves.length){
-      blk.appendChild(ele("div", "none", i === 0 ? "Preset — see placements below." : "No change."));
+      blk.appendChild(ele("div", "none", i === 0 ? "Starting layout — see placements below." : "No change."));
     } else {
       var ol = document.createElement("ol");
       moves.forEach(function(m){
@@ -619,7 +632,7 @@ function askRole(force){
       b.appendChild(ele("span", null, sub));
       b.addEventListener("click", function(){
         role = val; LS.set("role", role);
-        if(!isSM() && mode === "build") mode = "run";
+        if(!isSM() && mode === "edit") mode = "view";
         close(); render();
       });
       pick.appendChild(b);

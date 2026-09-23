@@ -1,5 +1,5 @@
 /* ===============================================================
-   The run screen — the one everybody stares at during a show.
+   The view screen — the one everybody stares at during a show.
 
    One question: what moves, from where, to where, right now. The
    plan answers it in pictures, the sheet answers it in words, and
@@ -39,7 +39,7 @@ function snapPx(i){
 }
 /* One number drives both the pane under the plan and the plan box
    above it, and it lives on the stage because both read it from there.
-   Build mode swaps the sheet for the tray; the plan has to grow into
+   Edit mode swaps the sheet for the tray; the plan has to grow into
    the difference or it sits in a strip with dead black under it. */
 /* The height the plan's own 1170x658 shape needs at this width. Past
    that the map cannot grow — a theatre is wider than it is deep and a
@@ -53,20 +53,20 @@ function applyPanes(){
      worked out for a phone follows the layout across the breakpoint. */
   if(!sheetOverlay()){
     stageEl.style.removeProperty("--pane");
-    $("buildpane").style.removeProperty("--buildmin");
+    $("editpane").style.removeProperty("--editmin");
     return;
   }
   var h;
-  if(mode === "build"){
+  if(mode === "edit"){
     /* Hand the room the plan cannot use to the pane below, which is
        what the build pane was always for. Left to its own content
        height it took ~190px of a 640px stage and the other 240 sat as
        a dead band above and below the map — the map no larger for it,
        the tray scrolling sideways with pieces off the edge. Folded,
        the row has asked for the map instead, so it keeps to itself. */
-    var bp = $("buildpane");
+    var bp = $("editpane");
     var spare = (stageEl.clientHeight || 480) - planFitH();
-    bp.style.setProperty("--buildmin", (paneOpen === false ? 0 : Math.max(0, spare)) + "px");
+    bp.style.setProperty("--editmin", (paneOpen === false ? 0 : Math.max(0, spare)) + "px");
     h = bp.offsetHeight || 130;
   } else h = snapPx(snap);
   stageEl.style.setProperty("--pane", h + "px");
@@ -129,11 +129,11 @@ function syncChip(){
 }
 function paintTop(){
   $("showname").textContent = S.show;
-  document.body.classList.toggle("mode-build", mode === "build");
-  $("buildpane").classList.toggle("hide", mode !== "build");
-  $("scenesheet").classList.toggle("hide", mode === "build");
-  $("planbtns").classList.toggle("hide", mode === "build");
-  $("btn-setup").textContent = mode === "build" ? "Done" : "Setup";
+  document.body.classList.toggle("mode-edit", mode === "edit");
+  $("editpane").classList.toggle("hide", mode !== "edit");
+  $("scenesheet").classList.toggle("hide", mode === "edit");
+  $("planbtns").classList.toggle("hide", mode === "edit");
+  $("btn-setup").textContent = mode === "edit" ? "Done" : "Setup";
   syncChip();
 }
 
@@ -141,24 +141,24 @@ function paintTop(){
 function paintSheetHead(moves){
   var sc = sceneAt(viewIdx);
   var k = $("grab-k");
-  k.textContent = browsing ? "Looking ahead" : "On stage now";
+  k.textContent = browsing ? "Previewing" : "Now showing";
   k.className = "k" + (browsing ? " ahead" : "");
   $("grab-num").textContent = (viewIdx+1) + "/" + S.scenes.length;
   $("grab-nm").textContent = sc ? sc.name : "No scenes yet";
   $("grab-ct").textContent = moves.length
     ? moves.length + (moves.length === 1 ? " move" : " moves")
-    : (viewIdx === 0 ? "preset" : "no change");
+    : (viewIdx === 0 ? "starting positions" : "no change");
 
   var J = $("jump"); J.innerHTML = "";
   if(!browsing){ J.classList.add("hide"); return; }
   J.classList.remove("hide");
   var live = sceneAt(S.liveIndex);
-  J.appendChild(ele("span", "t", "The show is on " + (S.liveIndex+1) + ". " + (live ? live.name : "—")));
-  J.appendChild(mkbtn("Back to live", "btn", function(){
+  J.appendChild(ele("span", "t", "Now showing " + (S.liveIndex+1) + ". " + (live ? live.name : "—")));
+  J.appendChild(mkbtn("Back to current", "btn", function(){
     browsing = false; viewIdx = S.liveIndex; selected = null; render();
   }));
   if(isSM()){
-    J.appendChild(mkbtn("Call this one", "btn on", function(){ callScene(viewIdx); }));
+    J.appendChild(mkbtn("Show this scene", "btn on", function(){ callScene(viewIdx); }));
   }
 }
 
@@ -167,7 +167,7 @@ function paintMoves(moves){
   var box = $("moves"); box.innerHTML = "";
   if(!moves.length){
     var msg = viewIdx === 0
-      ? "Scene 1 is the preset — where every piece starts before the house opens. Pinch the plan to look at it."
+      ? "Scene 1 is the starting layout — where every piece sits before the audience comes in. Pinch the plan to look at it."
       : "Nothing moves into this scene. The stage stays exactly as it is.";
     box.appendChild(ele("div", "empty", msg));
     return;
@@ -234,19 +234,19 @@ function paintDeck(){
   var D = $("deck");
   D.innerHTML = ""; D.className = "deck";
 
-  /* Building: one target, and its label is the verb. The status goes
+  /* Editing: one target, and its label is the verb. The status goes
      on the small line above it — a primary button reading "Up to date"
      is the biggest thing on the screen and names no action at all. */
-  if(mode === "build"){
+  if(mode === "edit"){
     D.classList.add("one");
     var save = ele("button", "go");
     save.disabled = calling;
     save.innerHTML = '<span class="k">'
-      + (dirty ? "Not on the other devices yet" : "Everything is saved") + "</span>"
-      + '<span class="v">' + (dirty ? "Save &amp; sync" : "Back to the show") + "</span>";
+      + (dirty ? "Not saved yet" : "Everything is saved") + "</span>"
+      + '<span class="v">' + (dirty ? "Save" : "Done") + "</span>";
     save.addEventListener("click", function(){
-      if(dirty) publish().then(function(ok){ if(ok) toast("Sent to every device."); render(); });
-      else setMode("run");
+      if(dirty) publish().then(function(ok){ if(ok) toast("Saved to every device."); render(); });
+      else setMode("view");
     });
     D.appendChild(save);
     return;
@@ -266,7 +266,7 @@ function paintDeck(){
   var live = sceneAt(S.liveIndex), next = sceneAt(S.liveIndex+1);
 
   if(isSM()){
-    if(browsing) sec("&#9679;", "Live", function(){
+    if(browsing) sec("&#9679;", "Current", function(){
       browsing = false; viewIdx = S.liveIndex; selected = null; render();
     });
     else sec("&#9664;", "Back", function(){ callScene(S.liveIndex-1); }, S.liveIndex <= 0);
@@ -274,11 +274,11 @@ function paintDeck(){
     var go = ele("button", "go");
     go.disabled = !next || calling;
     if(calling){
-      go.innerHTML = '<span class="k">Sending to every device</span><span class="v">Calling&hellip;</span>';
+      go.innerHTML = '<span class="k">Sending to every device</span><span class="v">Sending&hellip;</span>';
       R.appendChild(go);
       return;
     }
-    go.innerHTML = '<span class="k">' + (next ? "Call next scene" : "End of show") + "</span>"
+    go.innerHTML = '<span class="k">' + (next ? "Next scene" : "Last scene") + "</span>"
       + '<span class="v">'
       + (next ? '<span class="num">' + (S.liveIndex+2) + "</span>" + esc(next.name)
               : '<span class="num">' + (S.liveIndex+1) + "</span>" + esc(live ? live.name : "—"))
@@ -306,8 +306,8 @@ function paintDeck(){
      what you want to know while you are waiting in a wing. Step away
      from live and it switches to where the show actually is. */
   var ro = ele("div", "readout" + (browsing ? " away" : ""));
-  var show = browsing ? { k:"The show is on", i:S.liveIndex, sc:live }
-                      : { k: next ? "Next up" : "Last scene",
+  var show = browsing ? { k:"Now showing", i:S.liveIndex, sc:live }
+                      : { k: next ? "Next scene" : "Last scene",
                           i: next ? S.liveIndex+1 : S.liveIndex,
                           sc: next || live };
   ro.innerHTML = '<span class="k">' + show.k + "</span>"
@@ -324,8 +324,8 @@ function paintAlert(){
   a.classList.remove("hide"); a.innerHTML = "";
   var sc = sceneAt(callFail);
   a.appendChild(ele("div", "msg",
-    "Not sent — the crew is still on the scene before this one. You are on "
-    + (callFail+1) + ". " + (sc ? sc.name : "") + "; their phones are not."));
+    "Not sent. Everyone else is still on the scene before this one — you are on "
+    + (callFail+1) + ". " + (sc ? sc.name : "") + ", their screens are not."));
   var retry = ele("button", null, "Send again");
   retry.addEventListener("click", async function(){
     retry.disabled = true; retry.textContent = "Sending…";
@@ -334,7 +334,7 @@ function paintAlert(){
     if(ok) callFail = null;
     render();
   });
-  var dismiss = ele("button", null, "Call it by headset");
+  var dismiss = ele("button", null, "Tell them yourself");
   dismiss.addEventListener("click", function(){ callFail = null; render(); });
   a.appendChild(retry); a.appendChild(dismiss);
 }

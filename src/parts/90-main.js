@@ -24,7 +24,7 @@ function render(){
 buildPlan();
 
 $("btn-setup").addEventListener("click", function(){
-  if(mode === "build") setMode("run"); else setupSheet();
+  if(mode === "edit") setMode("view"); else setupSheet();
 });
 $("btn-replay").addEventListener("click", replay);
 $("btn-fit").addEventListener("click", fitView);
@@ -49,9 +49,9 @@ document.addEventListener("keydown", function(e){
     var scrim = document.querySelector(".scrim");
     if(scrim){ scrim.remove(); return; }
     if(selected){ selected = null; render(); return; }
-    if(mode === "build"){ setMode("run"); return; }
+    if(mode === "edit"){ setMode("view"); return; }
   }
-  if(!isSM() || mode === "build" || browsing) return;
+  if(!isSM() || mode === "edit" || browsing) return;
   if(e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); callScene(S.liveIndex+1); }
   if(e.key === "ArrowLeft") callScene(S.liveIndex-1);
 });

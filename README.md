@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/OneRedPanda99/TheaterThing/actions/workflows/tests.yml/badge.svg)](https://github.com/OneRedPanda99/TheaterThing/actions/workflows/tests.yml)
 
-A live set-piece tracker for a theatre crew. The stage manager calls a scene; every
+A live set-piece tracker for a theatre crew. The stage manager moves the show to a scene; every
 connected phone follows and plays an animated ground plan showing what moves where.
 
 Built for a high-school theatre department where the recurring problem was simple and
@@ -31,14 +31,14 @@ scenes.
 - **Routes are physical.** A piece going from the aux stage to the stage animates
   *through* wing SR. Wing SR to wing SL goes around the upstage crossover, never across
   the stage.
-- **Calling the show.** The SM advances the scene; every open device reloads to it and
-  plays the transition.
-- **Two screens, not seven modes.** *Run* is what everybody stares at during a show.
-  *Build* is where the stage manager makes it. Nothing else.
+- **Moving the show on.** The SM presses **Next scene**; every open device reloads to it
+  and plays the transition.
+- **Two screens, not seven modes.** *View* is what everybody stares at during a show.
+  *Edit* is where the stage manager makes it. Nothing else.
 - **Backstage mode.** A three-step dimmer (bright / dim / blackout, the last warmed
   toward red) and a screen-wake lock, because a phone at full brightness in the wings
   spills light into the house.
-- **Printable run sheet**, because theatre wifi is not a plan.
+- **Printable scene list**, because theatre wifi is not a plan.
 
 ## How the sync works
 
@@ -51,11 +51,11 @@ other open view live-reloads to that version.
 Consequences worth knowing:
 
 - Propagation is roughly **1-3 seconds plus a page reload**, not a websocket. Fine for
-  calling scene changes; not built for sub-second cueing.
+  moving the show on; not built for sub-second cueing.
 - Because a reload wipes everything in memory, per-device preferences (role, dimmer,
   sheet height, unsaved edits) live in `localStorage`.
 - Editing does **not** publish. Changes collect locally and go out on an explicit
-  **Save & sync**. Only calling a scene publishes immediately.
+  **Save**. Only moving the show to a scene publishes immediately.
 - A viewer with read-only access cannot publish; the page detects the rejection and
   switches to a read-only presentation.
 
@@ -65,7 +65,7 @@ state.
 
 ## Interface notes
 
-### Run
+### View
 
 The plan is always on screen — it is the thing the app is for, so there is no toggle
 hiding it. Under it sits a sheet carrying the scene, its move list and its note.
@@ -86,9 +86,9 @@ The command deck is pinned to the bottom edge deliberately:
 - It **never moves or changes meaning**, including while looking ahead at another
   scene, so the thumb learns one location. Jumping the show to the scene you are
   looking at is a separate, explicitly labelled control in the sheet header.
-- Only two controls are reachable during a run. Build mode's single **Save & sync**
+- Only two controls are reachable during a show. Edit mode's single **Save**
   target is deliberately smaller: that height is for a thumb finding GO in the dark
-  mid-show, and nothing in build mode is called under pressure.
+  mid-show, and nothing in edit mode happens under pressure.
 - Crew get the same block in the same place, but flat and unclickable. While they are
   on the live scene it names **what is coming**, because the sheet directly above
   already names what is on — and repeating it would waste the biggest readable thing
@@ -97,7 +97,7 @@ The command deck is pinned to the bottom edge deliberately:
 Nothing in the app scrolls the document; only the panes scroll. The deck therefore
 cannot be pushed off a phone screen mid-show, and it clears the home indicator.
 
-### Build
+### Edit
 
 A separate screen, not a mode bleeding through the run screen. Scenes run along the
 top, the plan fills the middle, and the set pieces run along the bottom.
@@ -162,8 +162,8 @@ src/
     00-boot.js       source capture, state, localStorage, helpers
     10-model.js      zones, routes, and the scene diff — no DOM
     20-plan.js       the SVG: draw, animate, pinch, pan, drag
-    30-run.js        the run screen
-    40-build.js      build mode, setup, the run sheet, modals
+    30-view.js       the view screen
+    40-edit.js       edit mode, setup, the printed scene list, modals
     50-sync.js       publish, call, dimmer, wake lock
     90-main.js       one render, and the wiring
 build.js             assembles both shipped files
@@ -199,8 +199,8 @@ npm test
 ```
 
 59 checks covering route derivation, move-list generation, the command deck's positional
-guarantees, build mode, feet parsing, free rotation and its snap, the three curtains,
-backstage modes, failed-call handling, the print sheet, and the self-rebuild round trip.
+guarantees, edit mode, feet parsing, free rotation and its snap, the three curtains,
+backstage modes, failed-send handling, the print sheet, and the self-rebuild round trip.
 
 They look for controls by **the words on them** rather than by class name, so a test
 breaks when the interface stops saying what it does — not when a selector is renamed.

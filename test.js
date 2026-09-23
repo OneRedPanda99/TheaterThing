@@ -50,7 +50,7 @@ function moveTexts() { return [...d.querySelectorAll("#moves .mv")].map(n => n.t
 function sceneChips() { return [...d.querySelectorAll("#scenebar .chip:not(.add)")]; }
 function openBuild() {
   d.getElementById("btn-setup").click();
-  need("Build the show").click();
+  need("Edit the show").click();
 }
 /* The piece menu is a sheet now, opened from the handle beside the
    piece. Tests that exercise its contents have to ask for it. */
@@ -96,7 +96,7 @@ setTimeout(async () => {
     const expected = state.scenes[state.liveIndex];
     if (d.getElementById("grab-nm").textContent !== expected.name)
       throw new Error("sheet says " + d.getElementById("grab-nm").textContent);
-    if (!d.getElementById("grab-k").textContent.includes("On stage now"))
+    if (!d.getElementById("grab-k").textContent.includes("Now showing"))
       throw new Error("does not say it is live");
   });
   step("the sheet header carries scene, position and move count", () => {
@@ -122,11 +122,11 @@ setTimeout(async () => {
   });
 
   console.log("--- moves are derived, never typed ---");
-  step("scene 1 is the preset, and says so", () => {
+  step("scene 1 is the starting layout, and says so", () => {
     goToScene(0);
-    d.getElementById("btn-setup").click();          // leave build mode
-    if (!/preset/i.test(d.querySelector("#moves .empty").textContent))
-      throw new Error("no preset message");
+    d.getElementById("btn-setup").click();          // leave edit mode
+    if (!/starting layout/i.test(d.querySelector("#moves .empty").textContent))
+      throw new Error("no starting-layout message");
   });
   step("scene 2 lists real moves", () => {
     goToScene(1);
@@ -182,7 +182,7 @@ setTimeout(async () => {
   step("GO is the primary target and the biggest control", () => {
     const go = d.querySelector("#deck .go");
     if (!go) throw new Error("no GO");
-    if (!/Call next scene/i.test(go.textContent)) throw new Error("GO says " + go.textContent);
+    if (!/Next scene/i.test(go.textContent)) throw new Error("GO says " + go.textContent);
     if (d.querySelectorAll("#deck .sec").length !== 1) throw new Error("more than one secondary");
   });
   step("only two controls in the deck during a run", () => {
@@ -194,25 +194,25 @@ setTimeout(async () => {
     d.getElementById("btn-setup").click();
     const go = d.querySelector("#deck .go");
     if (!go) throw new Error("GO vanished while browsing");
-    if (!/Call next scene/i.test(go.textContent)) throw new Error("GO changed job: " + go.textContent);
+    if (!/Next scene/i.test(go.textContent)) throw new Error("GO changed job: " + go.textContent);
   });
   step("looking ahead is stated, and leaving it is one tap", () => {
-    if (!/Looking ahead/i.test(d.getElementById("grab-k").textContent))
+    if (!/Previewing/i.test(d.getElementById("grab-k").textContent))
       throw new Error("does not say you are ahead");
     if (d.getElementById("jump").classList.contains("hide")) throw new Error("no way back");
-    need("Back to live", "button", d.getElementById("jump"));
-    need("Call this one", "button", d.getElementById("jump"));
+    need("Back to current", "button", d.getElementById("jump"));
+    need("Show this scene", "button", d.getElementById("jump"));
   });
   step("back to live", () => {
-    need("Back to live", "button", d.getElementById("jump")).click();
+    need("Back to current", "button", d.getElementById("jump")).click();
     if (!d.getElementById("jump").classList.contains("hide")) throw new Error("still browsing");
   });
 
   console.log("--- build mode ---");
   step("Build is one tap from Setup, and swaps the whole screen", () => {
     openBuild();
-    if (!d.body.classList.contains("mode-build")) throw new Error("not in build mode");
-    if (d.getElementById("buildpane").classList.contains("hide")) throw new Error("no build pane");
+    if (!d.body.classList.contains("mode-edit")) throw new Error("not in build mode");
+    if (d.getElementById("editpane").classList.contains("hide")) throw new Error("no build pane");
     if (!d.getElementById("scenesheet").classList.contains("hide")) throw new Error("run sheet still showing");
     if (sceneChips().length !== 5) throw new Error(sceneChips().length + " scene chips");
   });
@@ -387,16 +387,16 @@ setTimeout(async () => {
     need("Same as last scene", "button", pieceMenu()).click();
     if (!d.querySelector(".pc.sel")) throw new Error("piece left the scene");
   });
-  step("striking a piece takes it off the plan and greys its tray chip", () => {
+  step("removing a piece takes it off the plan and greys its tray chip", () => {
     const id = d.querySelector(".pc.sel").getAttribute("data-id");
-    need("Off for this scene", "button", pieceMenu()).click();
+    need("Remove from this scene", "button", pieceMenu()).click();
     if (d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("still drawn");
     const chip = [...d.querySelectorAll("#tray .pchip")].find(c => c.classList.contains("out"));
     if (!chip) throw new Error("tray does not show it is out of this scene");
-    need("Bring into this scene", "button", pieceMenu()).click();
+    need("Add to this scene", "button", pieceMenu()).click();
     if (!d.querySelector('.pc[data-id="' + id + '"]')) throw new Error("could not bring it back");
   });
-  step("editing does not publish — it goes to Save & sync", () => {
+  step("editing does not publish — it goes to Save", () => {
     if (!/Unsaved/i.test(d.getElementById("syncchip").textContent))
       throw new Error("chip says " + d.getElementById("syncchip").textContent);
     if (!/Save/i.test(d.querySelector("#deck .go").textContent))
@@ -429,7 +429,7 @@ setTimeout(async () => {
   });
   step("leaving build puts the run screen back", () => {
     d.getElementById("btn-setup").click();
-    if (d.body.classList.contains("mode-build")) throw new Error("still building");
+    if (d.body.classList.contains("mode-edit")) throw new Error("still building");
     if (d.getElementById("scenesheet").classList.contains("hide")) throw new Error("no move list");
     if (!d.querySelector("#deck .go")) throw new Error("no GO");
   });
@@ -442,17 +442,17 @@ setTimeout(async () => {
     if (d.querySelector("#deck .go")) throw new Error("crew can call the show");
     if (d.querySelectorAll("#deck .sec").length !== 2) throw new Error("crew need back and ahead");
     d.getElementById("btn-setup").click();
-    if (byText("Build the show")) throw new Error("crew offered build mode");
+    if (byText("Edit the show")) throw new Error("crew offered build mode");
     d.querySelector(".scrim").click();
   });
   step("on the live scene the read-out carries what is coming, not what the sheet says", () => {
     w.GL.S.liveIndex = 0; w.GL.render();
-    const back = byText("Back to live", "button", d.getElementById("jump"));
+    const back = byText("Back to current", "button", d.getElementById("jump"));
     if (back) back.click();
     const ro = d.querySelector("#deck .readout");
     if (!ro) throw new Error("crew get nothing in the primary slot");
     if (ro.classList.contains("away")) throw new Error("flagged as away while on the live scene");
-    if (!/Next up/i.test(ro.textContent))
+    if (!/Next scene/i.test(ro.textContent))
       throw new Error("read-out repeats what the sheet already names: " + ro.textContent);
     if (ro.textContent.includes(d.getElementById("grab-nm").textContent))
       throw new Error("read-out duplicates the sheet header");
@@ -461,7 +461,7 @@ setTimeout(async () => {
     d.querySelectorAll("#deck .sec")[1].click();                         // Ahead
     const ro = d.querySelector("#deck .readout");
     if (!ro.classList.contains("away")) throw new Error("not flagged as away from live");
-    if (!/The show is on/i.test(ro.textContent)) throw new Error("read-out says " + ro.textContent);
+    if (!/Now showing/i.test(ro.textContent)) throw new Error("read-out says " + ro.textContent);
   });
   step("back to stage manager", () => {
     d.getElementById("btn-setup").click();
@@ -473,11 +473,15 @@ setTimeout(async () => {
   console.log("--- backstage ---");
   step("brightness cycles bright to dim to blackout in place, and forces dark", () => {
     d.getElementById("btn-setup").click();
+    /* The control names the setting and shows its value, so read the
+       value off the button rather than its whole label. */
+    const val = x => (x.querySelector(".cs") || x).textContent.trim();
     const b = [...d.querySelectorAll(".modal button")]
-      .find(x => /^(Bright|Dim|Blackout)$/.test(x.textContent.trim()));
+      .find(x => /^(Bright|Dim|Blackout)$/.test(val(x)));
     if (!b) throw new Error("no brightness control");
-    const seen = [b.textContent.trim()];
-    for (let i = 0; i < 2; i++) { b.click(); seen.push(b.textContent.trim()); }
+    if (!/brightness/i.test(b.textContent)) throw new Error("brightness control does not say what it sets");
+    const seen = [val(b)];
+    for (let i = 0; i < 2; i++) { b.click(); seen.push(val(b)); }
     d.querySelector(".scrim").click();
     if (seen.join(">") !== "Bright>Dim>Blackout") throw new Error("cycle went " + seen.join(">"));
     if (d.documentElement.getAttribute("data-theme") !== "dark")
@@ -504,7 +508,7 @@ setTimeout(async () => {
     if (!byText("Send again", "button", a)) throw new Error("no retry");
   });
   step("the alert clears only when the SM says so", () => {
-    need("headset", "button", d.getElementById("alert")).click();
+    need("Tell them yourself", "button", d.getElementById("alert")).click();
     if (!d.getElementById("alert").classList.contains("hide")) throw new Error("still up");
     w.GL.setApi(null);
   });
@@ -532,7 +536,7 @@ setTimeout(async () => {
     need("Clear it", "button", d.querySelector(".modal")).click();
     if (w.GL.S.pieces.length !== 0) throw new Error("pieces survived");
     if (w.GL.S.scenes.length !== 1) throw new Error("scenes survived");
-    if (!d.body.classList.contains("mode-build")) throw new Error("did not drop you into build");
+    if (!d.body.classList.contains("mode-edit")) throw new Error("did not drop you into build");
   });
   step("rebuilt page is a complete, re-parseable document", () => {
     const src = w.GL.pageSource(w.GL.S);
