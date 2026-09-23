@@ -7,7 +7,7 @@
    Flat, matte, hard-edged. No gradients, no floating cards.
 
    The shell is one fixed grid, four rows:
-     topbar / scenebar (build only) / stage / deck
+     topbar / scenebar (edit only) / stage / deck
    The stage row owns the ground plan and, on a phone, the sheet
    that slides over it. Nothing in the app scrolls the document —
    only the panes scroll — so the deck can never be pushed off a
@@ -66,7 +66,7 @@ body{background:var(--ground);color:var(--ink);font-family:var(--ui);
 
 /* ---------------- the shell ----------------
    Rows are placed explicitly, not by source order: the scene bar is
-   display:none outside build mode, and an implicitly placed grid
+   display:none outside edit mode, and an implicitly placed grid
    drops the row entirely when that happens — which hands the stage's
    1fr to the deck and squashes the plan to nothing. */
 #root{position:fixed;inset:0;display:grid;
@@ -100,6 +100,12 @@ body{background:var(--ground);color:var(--ink);font-family:var(--ui);
 .btn.on{background:var(--work);border-color:var(--work);color:var(--work-ink);font-weight:700}
 .btn.hot{color:var(--gel-rose)}
 .btn.wide{width:100%}
+/* Name over value — the same shape the curtain control uses, so one
+   button says both what the setting is and where it is set. */
+.btn.lv{flex-direction:column;gap:1px;line-height:1.15;padding:6px 12px;align-items:flex-start}
+.btn.lv .cn{font-size:11px;letter-spacing:.05em;text-transform:uppercase;opacity:.75}
+.btn.lv .cs{font-size:13.5px;font-weight:700}
+.btn.lv.on .cn{opacity:.85}
 .seg{display:flex;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;flex-wrap:wrap}
 .seg button{border:0;background:none;padding:10px 12px;font-size:13.5px;cursor:pointer;
   min-height:var(--tap);flex:1 1 auto}
@@ -115,11 +121,11 @@ label.f > span{font-size:12px;color:var(--dim)}
 .tag{font-size:12px;color:var(--dim)}
 .help{font-size:12.5px;color:var(--dim);line-height:1.4}
 
-/* ---------------- scenebar (build mode only) ---------------- */
+/* ---------------- scenebar (edit mode only) ---------------- */
 .scenebar{display:none;gap:6px;padding:8px 10px;overflow-x:auto;
   background:var(--surface);border-bottom:1px solid var(--rule);
   scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-body.mode-build .scenebar{display:flex}
+body.mode-edit .scenebar{display:flex}
 .chip{flex:none;border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);
   cursor:pointer;padding:7px 12px;min-height:var(--tap);display:flex;flex-direction:column;
   justify-content:center;gap:1px;text-align:left;max-width:180px}
@@ -133,7 +139,7 @@ body.mode-build .scenebar{display:flex}
 /* ---------------- stage row ---------------- */
 .stage{position:relative;min-height:0;background:var(--void)}
 /* The plan stops where the pane below it starts — the move sheet during
-   a run, the piece tray while building. Laying it out underneath and
+   a run, the piece tray while editing. Laying it out underneath and
    letting the pane cover it would centre the theatre on a box half of
    which nobody can see. */
 .planwrap{position:absolute;top:0;left:0;right:0;bottom:var(--pane);overflow:hidden}
@@ -176,10 +182,10 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none}
 .pc .halo{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:4 3;opacity:0}
 .pc.sel .halo{opacity:1}
 .pc .note-dot{fill:var(--ink);opacity:.7}
-body.mode-build .pc{cursor:grab}
+body.mode-edit .pc{cursor:grab}
 .pc.dragging{cursor:grabbing}
 .pc.dragging .body{stroke:var(--work);stroke-width:3}
-/* Turn handle, build mode, selected piece only. It stands off the
+/* Turn handle, edit mode, selected piece only. It stands off the
    piece on an arm so it is never confused with the piece itself, and
    the transparent circle under it gives a thumb something to hit
    without covering what is being turned. Nothing on the plan resizes:
@@ -258,8 +264,8 @@ body.mode-build .pc{cursor:grab}
    Scene details on top, set pieces underneath. A wide theatre in a
    tall phone box letterboxes however you fit it, so the room the plan
    cannot use goes to the two things a stage manager edits most. */
-.buildpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
-  min-height:var(--buildmin,0px);display:flex;flex-direction:column;
+.editpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
+  min-height:var(--editmin,0px);display:flex;flex-direction:column;
   background:var(--surface);border-top:1px solid var(--rule2)}
 .scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
   padding:9px 10px;border-bottom:1px solid var(--rule)}
@@ -292,7 +298,7 @@ body.mode-build .pc{cursor:grab}
 .pchip.sel{border-color:var(--work);box-shadow:inset 0 0 0 1px var(--work)}
 .pchip.add{color:var(--dim)}
 
-/* ---------------- piece menu (build mode) ----------------
+/* ---------------- piece menu (edit mode) ----------------
    Shown as a sheet, opened from the handle beside a selected piece.
    It costs the map nothing until you ask for it, which floating it
    next to the piece and docking it under the plan both failed to do.
@@ -311,7 +317,7 @@ label.f.size > span{white-space:nowrap}
   padding:9px 10px calc(9px + var(--safe-b));
   display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:stretch}
 .deck .l{display:flex;gap:8px}
-/* Build mode gets one target and it is not called under pressure, so
+/* Edit mode gets one target and it is not called under pressure, so
    it does not need the full height the run deck does — that size is
    for a thumb finding GO in the dark, mid-show. */
 .deck.one{grid-template-columns:minmax(0,1fr);padding:7px 10px calc(7px + var(--safe-b))}
@@ -388,15 +394,15 @@ label.f.size > span{white-space:nowrap}
     max-height:44vh;transition:none}
   .grab{cursor:default}
   .grab::before{display:none}
-  .buildpane{position:relative}
+  .editpane{position:relative}
 }
 @media(min-width:900px),(min-width:640px) and (max-height:560px){
   .stage{grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:minmax(0,1fr)}
   .sheet{max-height:none;border-top:0;border-left:1px solid var(--rule2)}
-  .buildpane{grid-column:1/-1}
-  /* The move list is hidden while building, so its column would sit
+  .editpane{grid-column:1/-1}
+  /* The move list is hidden while editing, so its column would sit
      empty beside a squeezed plan. Give the plan the whole width. */
-  body.mode-build .stage{grid-template-columns:minmax(0,1fr)}
+  body.mode-edit .stage{grid-template-columns:minmax(0,1fr)}
   .go .v,.readout .v{font-size:23px}
 }
 
@@ -470,7 +476,7 @@ label.f.size > span{white-space:nowrap}
       </div>
     </section>
 
-    <div class="buildpane hide" id="buildpane">
+    <div class="editpane hide" id="editpane">
       <div class="scenestrip" id="scenestrip"></div>
       <div class="tray" id="tray"></div>
     </div>
@@ -541,7 +547,7 @@ if (draft && draft.baseRev === S.rev) { S = draft.state; }
    everything in memory, so anything personal to this phone lives in
    localStorage rather than in the show. */
 var role     = LS.get("role", null);      // "sm" | "crew"
-var mode     = "run";                     // "run" | "build"
+var mode     = "run";                     // "view" | "edit"
 var viewIdx  = S.liveIndex;
 var browsing = false;
 var selected = null;
@@ -977,11 +983,11 @@ function capAnchor(t, span, capFS, above){
   t.setAttribute("data-above", -(span/2 + 4));
   t.setAttribute("y", t.getAttribute(above ? "data-above" : "data-below"));
 }
-/* Build mode captions every piece, because there you are hunting for
+/* Edit mode captions every piece, because there you are hunting for
    one by name. That puts eight names into a drawing that already
    carries nine grid tags, six leg marks, three curtain names and four
    zone names, inside a phone-width box — and left alone they land on
-   each other. Captioning only what moves thins run mode out but does
+   each other. Captioning only what moves thins view mode out but does
    not save it: one piece landing on USC is enough, and there it is a
    name somebody is reading in the dark.
    Two rules, applied once everything is drawn and can be measured:
@@ -1043,10 +1049,10 @@ function drawPieces(scene){
      apart into a smear of overlapping type. During a run the only
      names worth printing on the map are the ones that move into this
      scene, plus whatever is selected; everything else is a coloured
-     block whose name is in the list. Build mode captions the lot,
+     block whose name is in the list. Edit mode captions the lot,
      because there you are looking for a specific piece. */
   var named = null;
-  if(mode !== "build"){
+  if(mode !== "edit"){
     named = {};
     if(selected) named[selected] = 1;
     movesInto(viewIdx).forEach(function(m){ if(m.piece) named[m.piece.id] = 1; });
@@ -1079,7 +1085,7 @@ function drawPieces(scene){
        in the upright group so it never swings underneath your thumb.
        Neither resizes — size is typed, because a resize grip sits
        exactly where a thumb lands while panning. */
-    if(mode === "build" && selected === p.id){
+    if(mode === "edit" && selected === p.id){
       var arm = SPIN_ARM * k, rad = 7 * k;
       g.setAttribute("data-arm", arm);
       var top = -hh/2 - arm;
@@ -1105,7 +1111,7 @@ function drawPieces(scene){
 function drawRoutes(moves){
   if(!routeLayer) return;
   routeLayer.innerHTML = "";
-  if(mode === "build") return;              // routes describe a change, not an edit
+  if(mode === "edit") return;              // routes describe a change, not an edit
   moves.forEach(function(m){
     if(!m.r || m.r.pts.length < 2) return;
     var d = m.r.pts.map(function(p,i){ return (i?"L":"M") + p.x + " " + p.y; }).join(" ");
@@ -1299,7 +1305,7 @@ function onPointerDown(evt){
   var g = evt.target.closest ? evt.target.closest(".pc") : null;
   if(!g){                                     // empty theatre: drag to pan
     pan = { id:evt.pointerId, x:evt.clientX, y:evt.clientY, vx:view.x, vy:view.y };
-    if(mode === "build" && selected){ selected = null; render(); }
+    if(mode === "edit" && selected){ selected = null; render(); }
     if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
     return;
   }
@@ -1308,7 +1314,7 @@ function onPointerDown(evt){
   var wasSelected = selected === id;
   selected = id;
 
-  if(mode !== "build"){ render(); return; }
+  if(mode !== "edit"){ render(); return; }
   var p = svgPoint(evt);
   if(!p){ render(); return; }
 
@@ -1440,9 +1446,9 @@ function onWheel(evt){
   zoomAbout(pt.x, pt.y, evt.deltaY < 0 ? 1.18 : 1/1.18);
 }
 
-/* ===== src/parts/30-run.js ===== */
+/* ===== src/parts/30-view.js ===== */
 /* ===============================================================
-   The run screen — the one everybody stares at during a show.
+   The view screen — the one everybody stares at during a show.
 
    One question: what moves, from where, to where, right now. The
    plan answers it in pictures, the sheet answers it in words, and
@@ -1482,7 +1488,7 @@ function snapPx(i){
 }
 /* One number drives both the pane under the plan and the plan box
    above it, and it lives on the stage because both read it from there.
-   Build mode swaps the sheet for the tray; the plan has to grow into
+   Edit mode swaps the sheet for the tray; the plan has to grow into
    the difference or it sits in a strip with dead black under it. */
 /* The height the plan's own 1170x658 shape needs at this width. Past
    that the map cannot grow — a theatre is wider than it is deep and a
@@ -1496,20 +1502,20 @@ function applyPanes(){
      worked out for a phone follows the layout across the breakpoint. */
   if(!sheetOverlay()){
     stageEl.style.removeProperty("--pane");
-    $("buildpane").style.removeProperty("--buildmin");
+    $("editpane").style.removeProperty("--editmin");
     return;
   }
   var h;
-  if(mode === "build"){
+  if(mode === "edit"){
     /* Hand the room the plan cannot use to the pane below, which is
        what the build pane was always for. Left to its own content
        height it took ~190px of a 640px stage and the other 240 sat as
        a dead band above and below the map — the map no larger for it,
        the tray scrolling sideways with pieces off the edge. Folded,
        the row has asked for the map instead, so it keeps to itself. */
-    var bp = $("buildpane");
+    var bp = $("editpane");
     var spare = (stageEl.clientHeight || 480) - planFitH();
-    bp.style.setProperty("--buildmin", (paneOpen === false ? 0 : Math.max(0, spare)) + "px");
+    bp.style.setProperty("--editmin", (paneOpen === false ? 0 : Math.max(0, spare)) + "px");
     h = bp.offsetHeight || 130;
   } else h = snapPx(snap);
   stageEl.style.setProperty("--pane", h + "px");
@@ -1572,11 +1578,11 @@ function syncChip(){
 }
 function paintTop(){
   $("showname").textContent = S.show;
-  document.body.classList.toggle("mode-build", mode === "build");
-  $("buildpane").classList.toggle("hide", mode !== "build");
-  $("scenesheet").classList.toggle("hide", mode === "build");
-  $("planbtns").classList.toggle("hide", mode === "build");
-  $("btn-setup").textContent = mode === "build" ? "Done" : "Setup";
+  document.body.classList.toggle("mode-edit", mode === "edit");
+  $("editpane").classList.toggle("hide", mode !== "edit");
+  $("scenesheet").classList.toggle("hide", mode === "edit");
+  $("planbtns").classList.toggle("hide", mode === "edit");
+  $("btn-setup").textContent = mode === "edit" ? "Done" : "Setup";
   syncChip();
 }
 
@@ -1584,24 +1590,24 @@ function paintTop(){
 function paintSheetHead(moves){
   var sc = sceneAt(viewIdx);
   var k = $("grab-k");
-  k.textContent = browsing ? "Looking ahead" : "On stage now";
+  k.textContent = browsing ? "Previewing" : "Now showing";
   k.className = "k" + (browsing ? " ahead" : "");
   $("grab-num").textContent = (viewIdx+1) + "/" + S.scenes.length;
   $("grab-nm").textContent = sc ? sc.name : "No scenes yet";
   $("grab-ct").textContent = moves.length
     ? moves.length + (moves.length === 1 ? " move" : " moves")
-    : (viewIdx === 0 ? "preset" : "no change");
+    : (viewIdx === 0 ? "starting positions" : "no change");
 
   var J = $("jump"); J.innerHTML = "";
   if(!browsing){ J.classList.add("hide"); return; }
   J.classList.remove("hide");
   var live = sceneAt(S.liveIndex);
-  J.appendChild(ele("span", "t", "The show is on " + (S.liveIndex+1) + ". " + (live ? live.name : "—")));
-  J.appendChild(mkbtn("Back to live", "btn", function(){
+  J.appendChild(ele("span", "t", "Now showing " + (S.liveIndex+1) + ". " + (live ? live.name : "—")));
+  J.appendChild(mkbtn("Back to current", "btn", function(){
     browsing = false; viewIdx = S.liveIndex; selected = null; render();
   }));
   if(isSM()){
-    J.appendChild(mkbtn("Call this one", "btn on", function(){ callScene(viewIdx); }));
+    J.appendChild(mkbtn("Show this scene", "btn on", function(){ callScene(viewIdx); }));
   }
 }
 
@@ -1610,7 +1616,7 @@ function paintMoves(moves){
   var box = $("moves"); box.innerHTML = "";
   if(!moves.length){
     var msg = viewIdx === 0
-      ? "Scene 1 is the preset — where every piece starts before the house opens. Pinch the plan to look at it."
+      ? "Scene 1 is the starting layout — where every piece sits before the audience comes in. Pinch the plan to look at it."
       : "Nothing moves into this scene. The stage stays exactly as it is.";
     box.appendChild(ele("div", "empty", msg));
     return;
@@ -1677,19 +1683,19 @@ function paintDeck(){
   var D = $("deck");
   D.innerHTML = ""; D.className = "deck";
 
-  /* Building: one target, and its label is the verb. The status goes
+  /* Editing: one target, and its label is the verb. The status goes
      on the small line above it — a primary button reading "Up to date"
      is the biggest thing on the screen and names no action at all. */
-  if(mode === "build"){
+  if(mode === "edit"){
     D.classList.add("one");
     var save = ele("button", "go");
     save.disabled = calling;
     save.innerHTML = '<span class="k">'
-      + (dirty ? "Not on the other devices yet" : "Everything is saved") + "</span>"
-      + '<span class="v">' + (dirty ? "Save &amp; sync" : "Back to the show") + "</span>";
+      + (dirty ? "Not saved yet" : "Everything is saved") + "</span>"
+      + '<span class="v">' + (dirty ? "Save" : "Done") + "</span>";
     save.addEventListener("click", function(){
-      if(dirty) publish().then(function(ok){ if(ok) toast("Sent to every device."); render(); });
-      else setMode("run");
+      if(dirty) publish().then(function(ok){ if(ok) toast("Saved to every device."); render(); });
+      else setMode("view");
     });
     D.appendChild(save);
     return;
@@ -1709,7 +1715,7 @@ function paintDeck(){
   var live = sceneAt(S.liveIndex), next = sceneAt(S.liveIndex+1);
 
   if(isSM()){
-    if(browsing) sec("&#9679;", "Live", function(){
+    if(browsing) sec("&#9679;", "Current", function(){
       browsing = false; viewIdx = S.liveIndex; selected = null; render();
     });
     else sec("&#9664;", "Back", function(){ callScene(S.liveIndex-1); }, S.liveIndex <= 0);
@@ -1717,11 +1723,11 @@ function paintDeck(){
     var go = ele("button", "go");
     go.disabled = !next || calling;
     if(calling){
-      go.innerHTML = '<span class="k">Sending to every device</span><span class="v">Calling&hellip;</span>';
+      go.innerHTML = '<span class="k">Sending to every device</span><span class="v">Sending&hellip;</span>';
       R.appendChild(go);
       return;
     }
-    go.innerHTML = '<span class="k">' + (next ? "Call next scene" : "End of show") + "</span>"
+    go.innerHTML = '<span class="k">' + (next ? "Next scene" : "Last scene") + "</span>"
       + '<span class="v">'
       + (next ? '<span class="num">' + (S.liveIndex+2) + "</span>" + esc(next.name)
               : '<span class="num">' + (S.liveIndex+1) + "</span>" + esc(live ? live.name : "—"))
@@ -1749,8 +1755,8 @@ function paintDeck(){
      what you want to know while you are waiting in a wing. Step away
      from live and it switches to where the show actually is. */
   var ro = ele("div", "readout" + (browsing ? " away" : ""));
-  var show = browsing ? { k:"The show is on", i:S.liveIndex, sc:live }
-                      : { k: next ? "Next up" : "Last scene",
+  var show = browsing ? { k:"Now showing", i:S.liveIndex, sc:live }
+                      : { k: next ? "Next scene" : "Last scene",
                           i: next ? S.liveIndex+1 : S.liveIndex,
                           sc: next || live };
   ro.innerHTML = '<span class="k">' + show.k + "</span>"
@@ -1767,8 +1773,8 @@ function paintAlert(){
   a.classList.remove("hide"); a.innerHTML = "";
   var sc = sceneAt(callFail);
   a.appendChild(ele("div", "msg",
-    "Not sent — the crew is still on the scene before this one. You are on "
-    + (callFail+1) + ". " + (sc ? sc.name : "") + "; their phones are not."));
+    "Not sent. Everyone else is still on the scene before this one — you are on "
+    + (callFail+1) + ". " + (sc ? sc.name : "") + ", their screens are not."));
   var retry = ele("button", null, "Send again");
   retry.addEventListener("click", async function(){
     retry.disabled = true; retry.textContent = "Sending…";
@@ -1777,23 +1783,23 @@ function paintAlert(){
     if(ok) callFail = null;
     render();
   });
-  var dismiss = ele("button", null, "Call it by headset");
+  var dismiss = ele("button", null, "Tell them yourself");
   dismiss.addEventListener("click", function(){ callFail = null; render(); });
   a.appendChild(retry); a.appendChild(dismiss);
 }
 
-/* ===== src/parts/40-build.js ===== */
+/* ===== src/parts/40-edit.js ===== */
 /* ===============================================================
-   Build mode — where the stage manager makes the show.
+   Edit mode — where the stage manager makes the show.
 
-   A separate screen, not a mode bleeding through the run screen.
+   A separate screen, not a mode bleeding through the view screen.
    The plan fills it, the scenes run along the top, the set pieces
    run along the bottom, and a tapped piece opens its inspector in
    between. Nothing is nested more than one tap deep.
    =============================================================== */
 
 function setMode(m){
-  if(m === "build" && !isSM()){ toast("Only the stage manager can build the show."); return; }
+  if(m === "edit" && !isSM()){ toast("Only the stage manager can edit the show."); return; }
   mode = m;
   selected = null;
   render();
@@ -1806,7 +1812,7 @@ function setMode(m){
 /* ---------------- scenes along the top ---------------- */
 function paintSceneBar(){
   var bar = $("scenebar");
-  if(mode !== "build"){ bar.innerHTML = ""; return; }
+  if(mode !== "edit"){ bar.innerHTML = ""; return; }
   bar.innerHTML = "";
   S.scenes.forEach(function(sc, i){
     var b = ele("button", "chip" + (i === viewIdx ? " cur" : "") + (i === S.liveIndex ? " live" : ""));
@@ -1874,7 +1880,7 @@ var paneOpen = LS.get("strip", true);
 
 function paintSceneStrip(){
   var strip = $("scenestrip");
-  if(mode !== "build"){ strip.innerHTML = ""; return; }
+  if(mode !== "edit"){ strip.innerHTML = ""; return; }
   var sc = sceneAt(viewIdx);
   strip.innerHTML = "";
   strip.classList.toggle("shut", !paneOpen);
@@ -1939,8 +1945,8 @@ function curtainSeg(sc){
 /* ---------------- set pieces along the bottom ---------------- */
 function paintTray(){
   var tray = $("tray");
-  tray.classList.toggle("hide", mode !== "build" || !paneOpen);
-  if(mode !== "build" || !paneOpen){ tray.innerHTML = ""; return; }
+  tray.classList.toggle("hide", mode !== "edit" || !paneOpen);
+  if(mode !== "edit" || !paneOpen){ tray.innerHTML = ""; return; }
   tray.innerHTML = "";
   var sc = sceneAt(viewIdx);
   S.pieces.forEach(function(p){
@@ -1949,7 +1955,7 @@ function paintTray(){
     var sw = ele("div", "sw"); sw.style.background = p.color;
     b.appendChild(sw);
     b.appendChild(document.createTextNode(p.name));
-    b.title = inScene ? "Select on the plan" : "Bring into this scene";
+    b.title = inScene ? "Select on the plan" : "Add to this scene";
     b.addEventListener("click", function(){
       selected = p.id;
       if(!inScene) leaveAsWas();
@@ -1996,7 +2002,7 @@ function newPieceSheet(){
       if(sc) sc.place[p.id] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" };
       selected = p.id;
       close(); markDirty(); render();
-      toast("Parked in wing SR. Drag it where it lives.");
+      toast("Added in wing SR. Drag it where it goes.");
     }));
     body.appendChild(r3);
     setTimeout(function(){ i1.focus(); }, 30);
@@ -2095,12 +2101,12 @@ function pieceMenu(){
       r2.appendChild(mkbtn("Same as last scene", "btn sm", function(){
         leaveAsWas(); close();
       }));
-      r2.appendChild(mkbtn("Off for this scene", "btn sm hot", function(){
+      r2.appendChild(mkbtn("Remove from this scene", "btn sm hot", function(){
         delete sc.place[selected]; markDirty(); render(); close();
-        toast("Struck. The crew will be told to take it off.");
+        toast("Removed. It will show as a move off.");
       }));
     } else {
-      r2.appendChild(mkbtn("Bring into this scene", "btn on", function(){
+      r2.appendChild(mkbtn("Add to this scene", "btn on", function(){
         leaveAsWas(); close();
       }));
     }
@@ -2125,10 +2131,10 @@ function leaveAsWas(){
   var src = prev && prev.place[selected];
   if(src){
     sc.place[selected] = { zone:src.zone, x:src.x, y:src.y, r:src.r||0, note:src.note||"" };
-    toast("Stays where it was in “" + prev.name + "” — no move for the crew.");
+    toast("Stays where it was in “" + prev.name + "” — no move needed.");
   } else {
     sc.place[selected] = { zone:"wingSR", x:0.5, y:0.5, r:0, note:"" };
-    toast("Nothing earlier to follow — parked in wing SR.");
+    toast("Nothing earlier to copy — placed in wing SR.");
   }
   markDirty(); render();
 }
@@ -2189,25 +2195,38 @@ function setupSheet(){
     var s1 = ele("div", "sect");
     s1.appendChild(ele("span", "tag", "This device"));
     var rr = ele("div", "row");
-    rr.appendChild(mkbtn(isSM() ? "Stage manager" : "Crew", "btn", function(){ close(); askRole(true); }));
-    /* These three toggle in place. Closing and reopening the sheet to
-       show a new label flashes the screen, which is the last thing you
+    /* Name over value, the same way the curtain control reads, because
+       a button whose whole label is its current value cannot say
+       whether it is stating that value or offering to set it. "Bright"
+       alone is both; "Brightness / Bright" is only one. */
+    function lv(name, value, cls, fn){
+      var b = ele("button", "btn lv" + (cls ? " " + cls : ""));
+      b.appendChild(ele("span", "cn", name));
+      b.appendChild(ele("span", "cs", value));
+      b.addEventListener("click", fn);
+      b.setAttribute("aria-label", name + ": " + value);
+      rr.appendChild(b);
+      return b;
+    }
+    function setLv(b, name, value, on){
+      b.lastChild.textContent = value;
+      b.setAttribute("aria-label", name + ": " + value);
+      b.classList.toggle("on", !!on);
+    }
+    lv("Role", isSM() ? "Stage manager" : "Crew", null, function(){ close(); askRole(true); });
+    /* These two toggle in place. Closing and reopening the sheet to
+       show a new value flashes the screen, which is the last thing you
        want from the control you reach for in the dark. */
-    var db = mkbtn(DIMS[dimIdx].label, "btn", function(){
+    var db = lv("Brightness", DIMS[dimIdx].label, dimIdx > 0 ? "on" : null, function(){
       dimIdx = (dimIdx+1) % DIMS.length; LS.set("dim", dimIdx); applyDim();
-      db.textContent = DIMS[dimIdx].label;
-      db.classList.toggle("on", dimIdx > 0);
+      setLv(db, "Brightness", DIMS[dimIdx].label, dimIdx > 0);
     });
-    db.classList.toggle("on", dimIdx > 0);
-    rr.appendChild(db);
-    var wb = mkbtn(!wakeOk ? "No screen lock" : (wakeWanted ? "Screen stays on" : "Screen sleeps"),
-      "btn" + (wakeWanted ? " on" : ""), function(){
-        wakeWanted = !wakeWanted; LS.set("wake", wakeWanted); applyWake();
-        wb.textContent = wakeWanted ? "Screen stays on" : "Screen sleeps";
-        wb.classList.toggle("on", wakeWanted);
-      });
+    function wakeVal(){ return !wakeOk ? "Not available" : (wakeWanted ? "Stays on" : "Sleeps"); }
+    var wb = lv("Screen", wakeVal(), wakeWanted ? "on" : null, function(){
+      wakeWanted = !wakeWanted; LS.set("wake", wakeWanted); applyWake();
+      setLv(wb, "Screen", wakeVal(), wakeWanted);
+    });
     wb.disabled = !wakeOk;
-    rr.appendChild(wb);
     s1.appendChild(rr);
     s1.appendChild(ele("div", "help",
       "Brightness dims this screen only, so a phone in the wings does not spill light into the house."));
@@ -2234,7 +2253,7 @@ function setupSheet(){
       iw.type = "text"; iw.inputMode = "decimal"; iw.value = fmtFeet(stageFeet());
       var wh = ele("div", "help");
       function sayScale(){
-        wh.textContent = "Proscenium opening, wall to wall. That makes the stage "
+        wh.textContent = "The stage opening, wall to wall. That makes the stage "
           + fmtFeet(stageFeet()) + " across and "
           + fmtFeet(stageFeet() * ZONES.stage.h / ZONES.stage.w) + " deep.";
       }
@@ -2253,8 +2272,8 @@ function setupSheet(){
       s2.appendChild(rw); s2.appendChild(wh);
 
       var r3 = ele("div", "row");
-      r3.appendChild(mkbtn("Build the show", "btn on", function(){ close(); setMode("build"); }));
-      r3.appendChild(mkbtn("Print run sheet", "btn", function(){
+      r3.appendChild(mkbtn("Edit the show", "btn on", function(){ close(); setMode("edit"); }));
+      r3.appendChild(mkbtn("Print scene list", "btn", function(){
         buildSheet(); close();
         setTimeout(function(){ window.print(); }, 60);
       }));
@@ -2263,7 +2282,7 @@ function setupSheet(){
       r4.appendChild(mkbtn("Start a new show", "btn hot", function(){ close(); startNewShow(); }));
       s2.appendChild(r4);
       s2.appendChild(ele("div", "help",
-        "The run sheet is the paper backup. Theatre wifi is not a plan."));
+        "The printed list is the paper backup. Theatre wifi is not a plan."));
       body.appendChild(s2);
 
       var s3 = ele("div", "sect");
@@ -2303,16 +2322,16 @@ function startNewShow(){
       S = { rev:S.rev, show:"My show", demo:false, liveIndex:0, liveStamp:Date.now(),
             pieces:[], scenes:[{ id:"s"+Date.now(), name:"Preshow", note:"", curtain:"closed", place:{} }] };
       viewIdx = 0; browsing = false; selected = null; callFail = null;
-      markDirty(); setMode("build");
+      markDirty(); setMode("edit");
       toast("Empty show ready. Add your set pieces from the tray.");
     }, "Clear it", "Cancel");
 }
 
-/* ---------------- run sheet (paper backup) ---------------- */
+/* ---------------- printed scene list (paper backup) ---------------- */
 function buildSheet(){
   var el = $("runsheet"); el.innerHTML = "";   // never $("sheet") — that is the stylesheet
   var h = ele("h1", null, S.show);
-  var meta = ele("div", "meta", "Set change run sheet · " + S.scenes.length + " scenes · "
+  var meta = ele("div", "meta", "Scene list · " + S.scenes.length + " scenes · "
     + S.pieces.length + " pieces · printed " + new Date().toLocaleDateString());
   el.appendChild(h); el.appendChild(meta);
 
@@ -2327,7 +2346,7 @@ function buildSheet(){
 
     var moves = movesBetween(sceneAt(i-1), sc);
     if(!moves.length){
-      blk.appendChild(ele("div", "none", i === 0 ? "Preset — see placements below." : "No change."));
+      blk.appendChild(ele("div", "none", i === 0 ? "Starting layout — see placements below." : "No change."));
     } else {
       var ol = document.createElement("ol");
       moves.forEach(function(m){
@@ -2404,7 +2423,7 @@ function askRole(force){
       b.appendChild(ele("span", null, sub));
       b.addEventListener("click", function(){
         role = val; LS.set("role", role);
-        if(!isSM() && mode === "build") mode = "run";
+        if(!isSM() && mode === "edit") mode = "view";
         close(); render();
       });
       pick.appendChild(b);
@@ -2556,7 +2575,7 @@ function render(){
 buildPlan();
 
 $("btn-setup").addEventListener("click", function(){
-  if(mode === "build") setMode("run"); else setupSheet();
+  if(mode === "edit") setMode("view"); else setupSheet();
 });
 $("btn-replay").addEventListener("click", replay);
 $("btn-fit").addEventListener("click", fitView);
@@ -2581,9 +2600,9 @@ document.addEventListener("keydown", function(e){
     var scrim = document.querySelector(".scrim");
     if(scrim){ scrim.remove(); return; }
     if(selected){ selected = null; render(); return; }
-    if(mode === "build"){ setMode("run"); return; }
+    if(mode === "edit"){ setMode("view"); return; }
   }
-  if(!isSM() || mode === "build" || browsing) return;
+  if(!isSM() || mode === "edit" || browsing) return;
   if(e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); callScene(S.liveIndex+1); }
   if(e.key === "ArrowLeft") callScene(S.liveIndex-1);
 });

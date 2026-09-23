@@ -186,11 +186,11 @@ function capAnchor(t, span, capFS, above){
   t.setAttribute("data-above", -(span/2 + 4));
   t.setAttribute("y", t.getAttribute(above ? "data-above" : "data-below"));
 }
-/* Build mode captions every piece, because there you are hunting for
+/* Edit mode captions every piece, because there you are hunting for
    one by name. That puts eight names into a drawing that already
    carries nine grid tags, six leg marks, three curtain names and four
    zone names, inside a phone-width box — and left alone they land on
-   each other. Captioning only what moves thins run mode out but does
+   each other. Captioning only what moves thins view mode out but does
    not save it: one piece landing on USC is enough, and there it is a
    name somebody is reading in the dark.
    Two rules, applied once everything is drawn and can be measured:
@@ -252,10 +252,10 @@ function drawPieces(scene){
      apart into a smear of overlapping type. During a run the only
      names worth printing on the map are the ones that move into this
      scene, plus whatever is selected; everything else is a coloured
-     block whose name is in the list. Build mode captions the lot,
+     block whose name is in the list. Edit mode captions the lot,
      because there you are looking for a specific piece. */
   var named = null;
-  if(mode !== "build"){
+  if(mode !== "edit"){
     named = {};
     if(selected) named[selected] = 1;
     movesInto(viewIdx).forEach(function(m){ if(m.piece) named[m.piece.id] = 1; });
@@ -288,7 +288,7 @@ function drawPieces(scene){
        in the upright group so it never swings underneath your thumb.
        Neither resizes — size is typed, because a resize grip sits
        exactly where a thumb lands while panning. */
-    if(mode === "build" && selected === p.id){
+    if(mode === "edit" && selected === p.id){
       var arm = SPIN_ARM * k, rad = 7 * k;
       g.setAttribute("data-arm", arm);
       var top = -hh/2 - arm;
@@ -314,7 +314,7 @@ function drawPieces(scene){
 function drawRoutes(moves){
   if(!routeLayer) return;
   routeLayer.innerHTML = "";
-  if(mode === "build") return;              // routes describe a change, not an edit
+  if(mode === "edit") return;              // routes describe a change, not an edit
   moves.forEach(function(m){
     if(!m.r || m.r.pts.length < 2) return;
     var d = m.r.pts.map(function(p,i){ return (i?"L":"M") + p.x + " " + p.y; }).join(" ");
@@ -508,7 +508,7 @@ function onPointerDown(evt){
   var g = evt.target.closest ? evt.target.closest(".pc") : null;
   if(!g){                                     // empty theatre: drag to pan
     pan = { id:evt.pointerId, x:evt.clientX, y:evt.clientY, vx:view.x, vy:view.y };
-    if(mode === "build" && selected){ selected = null; render(); }
+    if(mode === "edit" && selected){ selected = null; render(); }
     if(svg.setPointerCapture) try{ svg.setPointerCapture(evt.pointerId); }catch(e){}
     return;
   }
@@ -517,7 +517,7 @@ function onPointerDown(evt){
   var wasSelected = selected === id;
   selected = id;
 
-  if(mode !== "build"){ render(); return; }
+  if(mode !== "edit"){ render(); return; }
   var p = svgPoint(evt);
   if(!p){ render(); return; }
 

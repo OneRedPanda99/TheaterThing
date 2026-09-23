@@ -3,7 +3,7 @@
    Flat, matte, hard-edged. No gradients, no floating cards.
 
    The shell is one fixed grid, four rows:
-     topbar / scenebar (build only) / stage / deck
+     topbar / scenebar (edit only) / stage / deck
    The stage row owns the ground plan and, on a phone, the sheet
    that slides over it. Nothing in the app scrolls the document —
    only the panes scroll — so the deck can never be pushed off a
@@ -62,7 +62,7 @@ body{background:var(--ground);color:var(--ink);font-family:var(--ui);
 
 /* ---------------- the shell ----------------
    Rows are placed explicitly, not by source order: the scene bar is
-   display:none outside build mode, and an implicitly placed grid
+   display:none outside edit mode, and an implicitly placed grid
    drops the row entirely when that happens — which hands the stage's
    1fr to the deck and squashes the plan to nothing. */
 #root{position:fixed;inset:0;display:grid;
@@ -96,6 +96,12 @@ body{background:var(--ground);color:var(--ink);font-family:var(--ui);
 .btn.on{background:var(--work);border-color:var(--work);color:var(--work-ink);font-weight:700}
 .btn.hot{color:var(--gel-rose)}
 .btn.wide{width:100%}
+/* Name over value — the same shape the curtain control uses, so one
+   button says both what the setting is and where it is set. */
+.btn.lv{flex-direction:column;gap:1px;line-height:1.15;padding:6px 12px;align-items:flex-start}
+.btn.lv .cn{font-size:11px;letter-spacing:.05em;text-transform:uppercase;opacity:.75}
+.btn.lv .cs{font-size:13.5px;font-weight:700}
+.btn.lv.on .cn{opacity:.85}
 .seg{display:flex;border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;flex-wrap:wrap}
 .seg button{border:0;background:none;padding:10px 12px;font-size:13.5px;cursor:pointer;
   min-height:var(--tap);flex:1 1 auto}
@@ -111,11 +117,11 @@ label.f > span{font-size:12px;color:var(--dim)}
 .tag{font-size:12px;color:var(--dim)}
 .help{font-size:12.5px;color:var(--dim);line-height:1.4}
 
-/* ---------------- scenebar (build mode only) ---------------- */
+/* ---------------- scenebar (edit mode only) ---------------- */
 .scenebar{display:none;gap:6px;padding:8px 10px;overflow-x:auto;
   background:var(--surface);border-bottom:1px solid var(--rule);
   scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-body.mode-build .scenebar{display:flex}
+body.mode-edit .scenebar{display:flex}
 .chip{flex:none;border:1px solid var(--rule);border-radius:var(--r);background:var(--ground);
   cursor:pointer;padding:7px 12px;min-height:var(--tap);display:flex;flex-direction:column;
   justify-content:center;gap:1px;text-align:left;max-width:180px}
@@ -129,7 +135,7 @@ body.mode-build .scenebar{display:flex}
 /* ---------------- stage row ---------------- */
 .stage{position:relative;min-height:0;background:var(--void)}
 /* The plan stops where the pane below it starts — the move sheet during
-   a run, the piece tray while building. Laying it out underneath and
+   a run, the piece tray while editing. Laying it out underneath and
    letting the pane cover it would centre the theatre on a box half of
    which nobody can see. */
 .planwrap{position:absolute;top:0;left:0;right:0;bottom:var(--pane);overflow:hidden}
@@ -172,10 +178,10 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none}
 .pc .halo{fill:none;stroke:var(--work);stroke-width:2.5;stroke-dasharray:4 3;opacity:0}
 .pc.sel .halo{opacity:1}
 .pc .note-dot{fill:var(--ink);opacity:.7}
-body.mode-build .pc{cursor:grab}
+body.mode-edit .pc{cursor:grab}
 .pc.dragging{cursor:grabbing}
 .pc.dragging .body{stroke:var(--work);stroke-width:3}
-/* Turn handle, build mode, selected piece only. It stands off the
+/* Turn handle, edit mode, selected piece only. It stands off the
    piece on an arm so it is never confused with the piece itself, and
    the transparent circle under it gives a thumb something to hit
    without covering what is being turned. Nothing on the plan resizes:
@@ -254,8 +260,8 @@ body.mode-build .pc{cursor:grab}
    Scene details on top, set pieces underneath. A wide theatre in a
    tall phone box letterboxes however you fit it, so the room the plan
    cannot use goes to the two things a stage manager edits most. */
-.buildpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
-  min-height:var(--buildmin,0px);display:flex;flex-direction:column;
+.editpane{position:absolute;left:0;right:0;bottom:0;z-index:10;
+  min-height:var(--editmin,0px);display:flex;flex-direction:column;
   background:var(--surface);border-top:1px solid var(--rule2)}
 .scenestrip{display:flex;gap:7px;align-items:center;flex-wrap:wrap;
   padding:9px 10px;border-bottom:1px solid var(--rule)}
@@ -288,7 +294,7 @@ body.mode-build .pc{cursor:grab}
 .pchip.sel{border-color:var(--work);box-shadow:inset 0 0 0 1px var(--work)}
 .pchip.add{color:var(--dim)}
 
-/* ---------------- piece menu (build mode) ----------------
+/* ---------------- piece menu (edit mode) ----------------
    Shown as a sheet, opened from the handle beside a selected piece.
    It costs the map nothing until you ask for it, which floating it
    next to the piece and docking it under the plan both failed to do.
@@ -307,7 +313,7 @@ label.f.size > span{white-space:nowrap}
   padding:9px 10px calc(9px + var(--safe-b));
   display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;align-items:stretch}
 .deck .l{display:flex;gap:8px}
-/* Build mode gets one target and it is not called under pressure, so
+/* Edit mode gets one target and it is not called under pressure, so
    it does not need the full height the run deck does — that size is
    for a thumb finding GO in the dark, mid-show. */
 .deck.one{grid-template-columns:minmax(0,1fr);padding:7px 10px calc(7px + var(--safe-b))}
@@ -384,15 +390,15 @@ label.f.size > span{white-space:nowrap}
     max-height:44vh;transition:none}
   .grab{cursor:default}
   .grab::before{display:none}
-  .buildpane{position:relative}
+  .editpane{position:relative}
 }
 @media(min-width:900px),(min-width:640px) and (max-height:560px){
   .stage{grid-template-columns:minmax(0,1fr) 360px;grid-template-rows:minmax(0,1fr)}
   .sheet{max-height:none;border-top:0;border-left:1px solid var(--rule2)}
-  .buildpane{grid-column:1/-1}
-  /* The move list is hidden while building, so its column would sit
+  .editpane{grid-column:1/-1}
+  /* The move list is hidden while editing, so its column would sit
      empty beside a squeezed plan. Give the plan the whole width. */
-  body.mode-build .stage{grid-template-columns:minmax(0,1fr)}
+  body.mode-edit .stage{grid-template-columns:minmax(0,1fr)}
   .go .v,.readout .v{font-size:23px}
 }
 
