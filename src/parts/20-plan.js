@@ -172,10 +172,73 @@ function setPieceTransform(g, x, y, r, w, h, capFS){
   if(!spin) return;
   spin.setAttribute("transform", "rotate(" + (-r) + ")");
   var t = spin.querySelector(".cap");
-  if(t) t.setAttribute("y", spanH(w, h, r)/2 + 4 + capFS);
+  if(t) capAnchor(t, spanH(w, h, r), capFS);
   var mg = spin.querySelector(".menu");
   if(mg) mg.setAttribute("transform",
     "translate(" + (spanW(w, h, r)/2 + (parseFloat(g.getAttribute("data-arm")) || 0)) + ",0)");
+}
+
+/* A caption sits under its piece by default and can be flipped over
+   it. Both offsets are kept on the node so decollide() can swap them
+   without knowing anything about the piece it belongs to. */
+function capAnchor(t, span, capFS, above){
+  t.setAttribute("data-below", span/2 + 4 + capFS);
+  t.setAttribute("data-above", -(span/2 + 4));
+  t.setAttribute("y", t.getAttribute(above ? "data-above" : "data-below"));
+}
+/* Build mode captions every piece, because there you are hunting for
+   one by name. That puts eight names into a drawing that already
+   carries nine grid tags, six leg marks, three curtain names and four
+   zone names, inside a phone-width box — and left alone they land on
+   each other. Captioning only what moves thins run mode out but does
+   not save it: one piece landing on USC is enough, and there it is a
+   name somebody is reading in the dark.
+   Two rules, applied once everything is drawn and can be measured:
+   a caption that lands on another caption flips above its piece, and
+   a reference mark a caption lands on gives way. A grid tag is there
+   to be read off the map; a piece name is there to be found on it.
+   Screen rectangles, not getBBox, because the pieces are inside
+   rotated groups and only the client box is in a shared space. */
+function hits(a, b){
+  return a.left < b.right - 1 && b.left < a.right - 1 &&
+         a.top  < b.bottom - 1 && b.top  < a.bottom - 1;
+}
+function decollide(){
+  if(!svg) return;
+  var marks = [], i, j, n, list;
+  /* Restore first: a mark the last pass took away has to come back
+     when the piece that displaced it moves, or is no longer named. */
+  list = svg.querySelectorAll(".grid-tag, .plan-note");
+  for(i=0;i<list.length;i++){ list[i].style.visibility = ""; marks.push(list[i]); }
+
+  /* Zone names hold their ground — "WING SL" is how you read the map
+     at all — so a caption moves around them, not the other way. */
+  var keep = [];
+  list = svg.querySelectorAll(".zone-name, .house-tag");
+  for(i=0;i<list.length;i++) keep.push(list[i].getBoundingClientRect());
+
+  var caps = svg.querySelectorAll(".pc .cap"), placed = [];
+  for(i=0;i<caps.length;i++){
+    n = caps[i];
+    var box = n.getBoundingClientRect(), clash = false;
+    for(j=0;j<placed.length && !clash;j++) if(hits(box, placed[j])) clash = true;
+    for(j=0;j<keep.length && !clash;j++) if(hits(box, keep[j])) clash = true;
+    if(clash){
+      n.setAttribute("y", n.getAttribute("data-above"));
+      var flipped = n.getBoundingClientRect(), stillClash = false;
+      for(j=0;j<placed.length && !stillClash;j++) if(hits(flipped, placed[j])) stillClash = true;
+      for(j=0;j<keep.length && !stillClash;j++) if(hits(flipped, keep[j])) stillClash = true;
+      /* Nowhere clean to put it. Under the piece is the readable side
+         of a bad choice: above, it collides with the turn handle. */
+      if(stillClash) n.setAttribute("y", n.getAttribute("data-below"));
+      box = n.getBoundingClientRect();
+    }
+    placed.push(box);
+  }
+  for(i=0;i<marks.length;i++){
+    var m = marks[i].getBoundingClientRect();
+    for(j=0;j<placed.length;j++) if(hits(m, placed[j])){ marks[i].style.visibility = "hidden"; break; }
+  }
 }
 
 var SPIN_ARM = 22;          // handle stand-off from the piece, in CSS px
@@ -213,9 +276,10 @@ function drawPieces(scene){
 
     var up = el("g", { class:"upright", transform:"rotate(" + (-rot) + ")" }, g);
     if(!named || named[p.id]){
-      var t = el("text", { x:0, y:spanH(w,hh,rot)/2+4+capFS, "text-anchor":"middle",
+      var t = el("text", { x:0, "text-anchor":"middle",
                            class:"cap", "font-size":capFS, fill:"var(--ink)" }, up);
       t.textContent = p.name;
+      capAnchor(t, spanH(w,hh,rot), capFS);
     }
 
     /* Two handles on the selected piece, both small and both clear of
@@ -245,6 +309,7 @@ function drawPieces(scene){
     }
     nodes[p.id] = g;
   });
+  decollide();
 }
 function drawRoutes(moves){
   if(!routeLayer) return;
